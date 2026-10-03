@@ -208,7 +208,14 @@
 - PASS — dist의 최신 MD 3종 SHA-256은 사용자 원문과 동일하고 core_md에는 최신 3종 + 마스터가이드만 남았다. 마스터가이드 원문 hash도 변경 없음.
 - 원격 commit·tag·Actions·공개 다운로드 결과는 후속 최종 결과에 기록한다.
 
-### 남은 확인
+### 최종 배포 결과
 
-- v0.1.1 push/Pages 게시 확인.
-- 이전 기본 TTS 출력/물리 마이크 사용자 확인 사항은 그대로다. 엔진 파일 교체가 외부 AI의 생성 품질에 대한 사용자 청취/평가 검증을 대신하지 않는다.
+- PASS — 로컬 Git commit/push `0fd35b11645e7aa81935823241f36f3dfbf1e713`, 공개 저장소 `gunpodoman/myeok` main 및 새 `v0.1.1` tag 백업. 기존 v0.1.0/태그/사용자 DB는 덮어쓰지 않았다.
+- PASS — 해당 커밋의 Actions [37117134688](https://github.com/gunpodoman/myeok/actions/runs/37117134688) completed/success. Linux 타입/57 단위 테스트/Pages 빌드·deploy를 통과했다.
+- PASS — 공개 사이트와 `phase1/index.js` HTTP 200. 게시된 `app.js`/`runtime.js`가 최신 다운로드/HANDOFF 1.2를 사용한다. 공개 최신 MD 3개의 다운로드 bytes SHA-256이 위 사용자 원문과 동일하고 제거한 구버전 MD 3개는 실제 HTTP 404다.
+- 작업 기록 후속 commit/push는 기능 변경 없이 같은 사이트를 다시 게시한다. 태그는 위 실제 엔진 교체 코드의 고정 복구 지점이다.
+
+### 남은 작업
+
+- 이번 요청(최신 엔진 교체·Git 백업·Pages 게시)의 기능/배포 작업은 완료했다.
+- 이전 기본 TTS 출력/물리 마이크 사용자 확인 사항은 그대로다. 엔진 파일 교체가 외부 AI의 실제 생성/평가 품질 검증을 대신하지 않는다.
