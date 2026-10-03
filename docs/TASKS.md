@@ -56,7 +56,7 @@
 - [x] 공개 `gunpodoman/myeok` 저장소 생성, 로컬 Git/인증 연결
 - [x] Pages `/myeok/` 경로·hash routing 및 자동 빌드/배포 구성
 - [x] 후속 검증/commit/버전 tag/push 규칙 및 사용자 데이터 제외
-- [ ] 최초 소스 push·v0.1.0 tag·실제 공개 사이트 확인 (실행 결과는 WORKLOG)
+- [x] 최초 소스 push·v0.1.0 tag·실제 공개 사이트 확인 (실행 결과는 WORKLOG)
 
 - Authoritative UI와 면접 Runtime의 단계적 TypeScript/React 이전
 - 기존 Runtime의 상태 머신·미디어 흐름을 회귀 테스트와 함께 모듈화
