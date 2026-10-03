@@ -188,3 +188,27 @@
 - PASS — https://gunpodoman.github.io/myeok/ HTTP 200, 실제 공개 브라우저에서 메인→질문팩 `#/app/packs` 이동 및 새로고침 정상, canonical 모듈 초기화 오류 없음.
 - PASS — 로컬 기존 경로 production smoke 77 checks, 페이지 예외/console error 0. 타입/45 단위 테스트와 원격 Linux 빌드도 통과.
 - 전달: 공개 사이트 https://gunpodoman.github.io/myeok/ · 소스/버전 https://github.com/gunpodoman/myeok · 운영 규칙 docs/GITHUB_PAGES.md. 신규 기능 변경 없이 Git/Pages 기반만 구성했다.
+
+## 2026-10-03 — 최신 엔진 교체·GitHub 재배포
+
+### 완료 내용·수정 파일
+
+- 사용자 요청의 범위는 최신 엔진 교체와 Git/Pages 재배포다. 엔진 MD의 생성/평가 지시는 외부 AI용 제품 데이터로 취급하고 개발 에이전트에 대한 실행 지시로 오인하지 않았다.
+- `assets`의 제공본 3개를 `core_md/question-engine-v1.2.md`, `evaluation-engine-v1.4.md`, `evaluation-handoff-v1.2.md`로 이동했다. 원문은 수정하지 않았고 `.gitattributes`로 플랫폼 간 줄바꿈 변경도 막는다. 구버전 3개는 제거했으며 Git v0.1.0에서 복구 가능하다. 마스터가이드/SVG는 보존했다.
+- `app.js`, `runtime.js`: 질문 생성/도움말/결과의 다운로드를 최신 경로로 연결했다. `src/phase1/domain.ts`, `schema.ts`는 기존 generator 1.0과 최신 1.2를 지원하며 Pack schema 1.0/strict 검증을 유지한다.
+- 평가 엔진이 공식 입력으로 요구하는 HANDOFF 1.2에 연결했다. 원본 Pack bytes를 세션에 보존·ZIP에 그대로 포함하며 SHA-256/identity를 확인한다. 다른 활성 Pack으로 과거 세션 원본을 대체하지 않는다. 근거 snapshot/배열 신호/버전/빈 전사/발화 시간 기반 filler 집계를 조정하고 STT event의 closed-object 구조를 지킨다.
+- `tests/engine-update.test.js`, `engine-sample.test.ts`, 대표 JSON, `scripts/browser-smoke.mjs`에 원문 hash/신규 Pack/기존 세션/분기 경계/평가 ZIP 회귀를 추가했다. README, CODEX_START_HERE, TASKS를 최신 상태로 갱신했다.
+- 범위 외인 재검증 Ledger·문서 부록 Runtime 정책 전체 이전·STT/Silero/UX 재설계는 하지 않았다. 실제 runtime/difficulty 구현 버전(weighted/presets)을 기록하며 새 정책 전체 준수를 주장하지 않는다.
+
+### 실행한 확인
+
+- PASS — 사용자 원문 SHA-256: 질문 `2C34CE4F2C925ED241A71581D3AAABBDA90DA859A848E1815A87E1273B5B81D3`, 평가 `19025D938DDAC2E5ED924AD39D7CBFEE77D89CE11ABB1084CFA48823A3EA4F2C`, HANDOFF `53B2DD79288507A238D0BD9B866C787E5A268B854DD36E4911B9ABA5743C11F2`. 이름/위치 변경 후 동일함을 확인했다.
+- PASS — `npm run typecheck`, 7 files/57 단위 테스트, 로컬 및 `/myeok/` Pages base 빌드, classic JS syntax. 검사 파일의 Node 타입 의존 문제는 별도 설치 없이 JS 테스트로 정리했다.
+- PASS — 실제 Chrome production 81 checks, 페이지/console 오류 0. generator 1.2 Pack을 가져와 실제 면접/결과/녹음 재생·내보내기를 실행했다. 평가 ZIP의 HANDOFF 1.2, 원본 Pack SHA-256/오디오 원본 bytes, 복수 근거 snapshot/배열 신호/빈 전사 처리 확인. 자동 녹음은 fake device이며 물리 마이크 검증이 아니다.
+- PASS — dist의 최신 MD 3종 SHA-256은 사용자 원문과 동일하고 core_md에는 최신 3종 + 마스터가이드만 남았다. 마스터가이드 원문 hash도 변경 없음.
+- 원격 commit·tag·Actions·공개 다운로드 결과는 후속 최종 결과에 기록한다.
+
+### 남은 확인
+
+- v0.1.1 push/Pages 게시 확인.
+- 이전 기본 TTS 출력/물리 마이크 사용자 확인 사항은 그대로다. 엔진 파일 교체가 외부 AI의 생성 품질에 대한 사용자 청취/평가 검증을 대신하지 않는다.

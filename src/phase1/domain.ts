@@ -82,7 +82,7 @@ export type RuntimeTriggerType = typeof runtimeTriggerTypes[number];
 
 export interface Generator {
   engine_name: '학생부기반_공통_실전면접_질문엔진';
-  engine_version: '1.0';
+  engine_version: '1.0' | '1.2';
   created_at: string;
   language: 'ko-KR';
 }

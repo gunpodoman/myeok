@@ -98,7 +98,7 @@ npm run smoke:dev
 
 ## 현재 보존된 면접 기능
 
-마이크 점검, TTS, MediaRecorder, Web Speech STT, RMS 기반 간이 발화/침묵 측정, 응답 시간과 pause/CPM/filler 추정, seed 기반 질문 선택, 기존 follow-up, 중간 체크포인트, 결과/비교, `INTERVIEW_EVAL_HANDOFF/1.1` 및 평가용 ZIP을 보존했다.
+마이크 점검, TTS, MediaRecorder, Web Speech STT, RMS 기반 간이 발화/침묵 측정, 응답 시간과 pause/CPM/filler 추정, seed 기반 질문 선택, 기존 follow-up, 중간 체크포인트, 결과/비교를 보존한다. 평가용 ZIP은 `INTERVIEW_EVAL_HANDOFF/1.2`와 원본 `interview-pack.json`, 근거 snapshot, 배열 신호 및 답변 오디오를 포함한다. 원본 Pack을 찾을 수 없는 과거 세션은 다른 Pack으로 대체하지 않고 PARTIAL로 표시한다.
 
 Silero VAD는 아직 연결하지 않았다. 현재 발화 구간은 RMS 기반이며 결과에 `vad_mode: DISABLED`와 부분 품질로 기록된다. Web Speech API는 브라우저/OS 구현에 따라 온라인 처리를 사용할 수 있다.
 
@@ -106,4 +106,4 @@ Silero VAD는 아직 연결하지 않았다. 현재 발화 구간은 RMS 기반�
 
 기본 TTS 확정은 현재 결정이다. 폐기한 neural 모델을 다시 설치하거나 연결하지 않는다. React 전체 이전, STT 교체, Silero 신규 작업, Passive Filler Observation은 이번 작업 범위가 아니다. 현재 React foundation은 준비 자산일 뿐 기본 앱이 아니다.
 
-제품 명세는 `core_md`의 4개 문서다. 안정화 패스에서는 데이터 계약을 유지한 채 질문 생성 엔진 문서 하나에 첨부 즉시 실행 규칙과 행동 수준 Acceptance Test만 보강했다. 작업 상태와 검증 증거는 `.agent/STATE.md`, `docs/WORKLOG.md`, `.agent/verification`에 있다.
+제품 명세는 `core_md`의 4개 문서다. 현재 질문 엔진은 `question-engine-v1.2.md`, 평가 엔진은 `evaluation-engine-v1.4.md`, 평가 데이터 계약은 `evaluation-handoff-v1.2.md`다. 사용자 제공 FINAL QA 수정본의 내용은 그대로 유지하며 구버전 3종은 이전 Git 버전에서 복구할 수 있다. 질문팩 schema는 `INTERVIEW_PACK/1.0`을 유지하고 generator 1.0/1.2를 함께 지원한다. 학생부 분석 마스터가이드 v4.0은 변경하지 않았다. 작업 상태와 검증 증거는 `.agent/STATE.md`, `docs/WORKLOG.md`, `.agent/verification`에 있다.

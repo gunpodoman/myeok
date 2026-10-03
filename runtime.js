@@ -301,6 +301,7 @@ function fxCreateSession(packRecord) {
   const seed = fxUuid();
   const rnd = fxPrng(seed);
   const config = structuredClone(fxLoadConfig(fx.config));
+  if (!config.ttsEnabled && ['TTS_ONLY', 'BLIND_AFTER_TTS'].includes(config.presentationMode)) config.presentationMode = 'ALWAYS_VISIBLE';
   const interviewers = fxSelectInterviewers(pack, config.interviewerCount, rnd);
   const roots = fxBuildRootQueue(pack, config, interviewers, rnd);
   const queue = roots.map((q, index) => ({
@@ -318,6 +319,11 @@ function fxCreateSession(packRecord) {
     pack_sha256: packRecord.sha256,
     pack_id: pack.pack_id,
     pack_generator_version: pack.generator?.engine_version || '1.0',
+    pack_raw_bytes: packRecord.rawBytes,
+    site_version: '0.1.1',
+    runtime_policy_version: '0.2.0-weighted',
+    difficulty_engine_version: '0.2.0-presets',
+    metrics_engine_version: '0.2.0-rms',
     session_seed: seed,
     config,
     interviewers: interviewers.map(i => i.interviewer_id),
@@ -366,53 +372,39 @@ function fxRemainingMs(session) {
   return Math.max(0, max - (performance.now() - session.started_perf));
 }
 
-function fxTriggerMatched(trigger, answer, session, rnd) {
-  if (!trigger) return false;
-  const text = (answer.answer_transcript || '').replaceAll(/\s+/g, ' ').trim();
-  if (trigger.type === 'ALWAYS_ELIGIBLE' || trigger.type === 'AFTER_PARENT') return true;
-  if (trigger.type === 'RANDOM') return rnd() <= trigger.probability;
-  if (trigger.type === 'KEYWORD_ANY') return trigger.keywords.some(word => text.includes(word));
-  if (trigger.type === 'ANSWER_TOO_SHORT') return Number(answer.timing?.answer_duration_ms || 0) < trigger.threshold_ms;
-  if (trigger.type === 'ANSWER_TOO_LONG') return Number(answer.timing?.answer_duration_ms || 0) > trigger.threshold_ms;
-  if (trigger.type === 'NO_ANSWER') return answer.answer_status === 'NO_ANSWER';
-  if (trigger.type === 'DONT_KNOW_PATTERN') return trigger.phrases.some(phrase => text.includes(phrase));
-  if (trigger.type === 'SESSION_TIME_REMAINING') {
-    const remaining = fxRemainingMs(session);
-    if (trigger.operator === 'LT') return remaining < trigger.threshold_ms;
-    if (trigger.operator === 'LTE') return remaining <= trigger.threshold_ms;
-    if (trigger.operator === 'GT') return remaining > trigger.threshold_ms;
-    if (trigger.operator === 'GTE') return remaining >= trigger.threshold_ms;
-  }
-  return false;
-}
-
-function fxBranchPayload(trigger, parentQuestionId, answer) {
-  const base = { type: trigger.type, source_question_id: parentQuestionId, used_signal: true };
-  if (trigger.type === 'ANSWER_TOO_SHORT' || trigger.type === 'ANSWER_TOO_LONG') {
-    return { ...base, measured_value: answer.timing.answer_duration_ms, threshold_value: trigger.threshold_ms, unit: 'ms' };
-  }
-  if (trigger.type === 'KEYWORD_ANY') {
-    const text = answer.answer_transcript || '';
-    const word = trigger.keywords.find(keyword => text.includes(keyword)) || null;
-    return { ...base, matched_keyword: word, matched_text: word ? text : null };
-  }
-  if (trigger.type === 'RANDOM') return { ...base, probability: trigger.probability };
-  return base;
-}
-
-function fxRuntimeSignal(trigger, answer, used) {
+function fxObserveTrigger(trigger, answer, session, rnd) {
   if (!trigger) return null;
-  const base = { type: trigger.type, observed: true, used_for_branching: Boolean(used) };
-  if (trigger.type === 'ANSWER_TOO_SHORT' || trigger.type === 'ANSWER_TOO_LONG') {
-    return { ...base, measured_value: answer.timing.answer_duration_ms, threshold_value: trigger.threshold_ms, unit: 'ms' };
+  const text = (answer.answer_transcript || '').replaceAll(/\s+/g, ' ').trim();
+  if (trigger.type === 'ALWAYS_ELIGIBLE' || trigger.type === 'AFTER_PARENT') return { matched: true, branch: { type: 'AFTER_PARENT' }, signal: null };
+  let observed = false;
+  let payload = {};
+  if (trigger.type === 'RANDOM') {
+    const draw = rnd();
+    observed = draw < trigger.probability;
+    payload = { probability: trigger.probability, draw_value: draw };
+  } else if (trigger.type === 'KEYWORD_ANY' || trigger.type === 'DONT_KNOW_PATTERN') {
+    if (!text) return null;
+    const value = (trigger.keywords || trigger.phrases || []).find(word => text.includes(word));
+    observed = Boolean(value);
+    payload = trigger.type === 'KEYWORD_ANY' ? { matched_keyword: value || null, matched_text: value ? text : null } : { matched_phrase: value || null, matched_text: value ? text : null };
+  } else if (trigger.type === 'ANSWER_TOO_SHORT' || trigger.type === 'ANSWER_TOO_LONG') {
+    const duration = answer.timing?.answer_duration_ms;
+    if (duration === null || duration === undefined) return null;
+    observed = trigger.type === 'ANSWER_TOO_SHORT' ? duration < trigger.threshold_ms : duration > trigger.threshold_ms;
+    payload = { measured_value: duration, threshold_value: trigger.threshold_ms, unit: 'ms' };
+  } else if (trigger.type === 'NO_ANSWER') {
+    observed = answer.answer_status === 'NO_ANSWER';
+  } else if (trigger.type === 'SESSION_TIME_REMAINING') {
+    const remaining = Math.round(fxRemainingMs(session));
+    observed = { LT: remaining < trigger.threshold_ms, LTE: remaining <= trigger.threshold_ms, GT: remaining > trigger.threshold_ms, GTE: remaining >= trigger.threshold_ms }[trigger.operator];
+    payload = { operator: trigger.operator, measured_value: remaining, threshold_value: trigger.threshold_ms, unit: 'ms' };
+  } else {
+    return null;
   }
-  if (trigger.type === 'KEYWORD_ANY') {
-    const text = answer.answer_transcript || '';
-    const word = trigger.keywords.find(keyword => text.includes(keyword)) || null;
-    return { ...base, matched_keyword: word, matched_text: word ? text : null };
-  }
-  if (trigger.type === 'RANDOM') return { ...base, probability: trigger.probability };
-  return base;
+  const branch = { type: trigger.type, ...payload };
+  delete branch.draw_value;
+  const signal = !observed && ['KEYWORD_ANY', 'DONT_KNOW_PATTERN'].includes(trigger.type) ? null : { type: trigger.type, observed, ...payload, used_for_branching: false };
+  return { matched: observed, branch, signal };
 }
 
 function fxMaybeInsertFollowup(question, answer) {
@@ -425,17 +417,20 @@ function fxMaybeInsertFollowup(question, answer) {
   const candidates = (question.followup_ids || []).map(id => byId.get(id)).filter(Boolean).filter(q => !session.asked_ids.includes(q.question_id) && !session.queue.slice(session.cursor + 1).some(e => e.question_id === q.question_id));
   if (!candidates.length) return;
   const rnd = fxPrng(`${session.session_seed}:${question.question_id}:${session.questions.length}`);
-  const matched = candidates.filter(candidate => fxTriggerMatched(candidate.runtime_trigger, answer, session, rnd));
+  const observations = candidates.map(candidate => ({ candidate, observation: fxObserveTrigger(candidate.runtime_trigger, answer, session, rnd) }));
+  answer.runtime_signals = observations.flatMap(item => item.observation?.signal ? [item.observation.signal] : []);
+  const matched = observations.filter(item => item.observation?.matched);
   if (!matched.length) return;
-  const selected = fxWeightedPick(matched, q => q.priority || 1, rnd);
+  const chosen = fxWeightedPick(matched, item => item.candidate.priority || 1, rnd);
+  const selected = chosen.candidate;
+  if (chosen.observation.signal) chosen.observation.signal.used_for_branching = true;
   const index = session.cursor + 1;
   session.queue.splice(index, 0, {
     question_id: selected.question_id,
     selected_text: fxSelectText(selected, rnd),
     interviewer_id: session.interviewers[(session.questions.length + 1) % session.interviewers.length],
-    branch_reason: fxBranchPayload(selected.runtime_trigger, question.question_id, answer)
+    branch_reason: { ...chosen.observation.branch, source_question_id: question.question_id, used_signal: true }
   });
-  answer.runtime_signal = fxRuntimeSignal(selected.runtime_trigger, answer, true);
 }
 
 function fxSpeechRecognitionCtor() {
@@ -606,7 +601,7 @@ function fxRecognitionStart(questionId, reset = true) {
     };
     recognition.onerror = event => {
       runtime.recognitionErrors.push(event.error || 'unknown');
-      fxEvent(fx.activeSession, 'STT_ERROR', questionId, { value: event.error || 'unknown' });
+      fxEvent(fx.activeSession, 'STT_ERROR', questionId, { metadata: { code: event.error || null, message: event.message || null } });
     };
     recognition.onend = () => {
       runtime.recognitionActive = false;
@@ -627,7 +622,7 @@ function fxRecognitionStop(questionId) {
     try { runtime.recognition.stop(); } catch (_) {}
   }
   runtime.recognitionActive = false;
-  if (runtime.transcriptFinal.trim()) fxEvent(fx.activeSession, 'STT_FINAL', questionId, { value: runtime.transcriptFinal.trim() });
+  if (runtime.transcriptFinal.trim()) fxEvent(fx.activeSession, 'STT_FINAL', questionId);
 }
 
 function fxStartEnergyTracking(questionId, reset = true) {
@@ -738,7 +733,7 @@ function fxTextMetrics(transcript, answerDurationMs, speechDurationMs) {
   const speechMinutes = speechDurationMs > 0 ? speechDurationMs / 60000 : 0;
   return {
     fillerCount,
-    fillerPerMinute: totalMinutes ? fillerCount / totalMinutes : 0,
+    fillerPerMinute: speechMinutes ? fillerCount / speechMinutes : null,
     repetition,
     restart,
     selfCorrection,
@@ -939,12 +934,11 @@ async function fxFinishAnswer(options = {}) {
     priority: question.priority,
     coverage_tags: question.coverage_tags || [],
     recommended_answer_seconds: question.recommended_answer_seconds ?? null,
-    student_record_anchor: null,
-    student_record_excerpt: null,
     evidence_ids: question.evidence_ids || [],
+    record_evidence: (question.evidence_ids || []).map(id => packRecord.pack.record_evidence.find(item => item.evidence_id === id)).filter(Boolean),
     followup_trigger: entry.branch_reason,
-    answer_status: hasSpeech ? (sttAvailable ? 'ANSWERED' : 'STT_UNAVAILABLE') : 'NO_ANSWER',
-    answer_transcript: transcript,
+    answer_status: hasSpeech ? (options.truncated ? 'CUT_OFF' : transcript ? 'ANSWERED' : 'STT_UNAVAILABLE') : fx.analyser ? 'NO_ANSWER' : 'TECHNICAL_FAILURE',
+    answer_transcript: transcript || null,
     presentation: {
       mode: presentationMode,
       question_visible_during_answer: questionVisibleDuringAnswer,
@@ -970,23 +964,23 @@ async function fxFinishAnswer(options = {}) {
       longest_pause_ms: Math.round(analysis.longestPause),
       mean_pause_ms: Math.round(analysis.meanPause),
       median_pause_ms: Math.round(analysis.medianPause),
-      filler_count: sttAvailable ? textMetrics.fillerCount : null,
-      filler_per_minute: sttAvailable ? textMetrics.fillerPerMinute : null,
-      repetition_count: sttAvailable ? textMetrics.repetition : null,
-      restart_count: sttAvailable ? textMetrics.restart : null,
-      self_correction_count: sttAvailable ? textMetrics.selfCorrection : null,
-      character_count: sttAvailable ? textMetrics.characterCount : null,
-      sentence_count: sttAvailable ? textMetrics.sentenceCount : null,
-      characters_per_minute_total: sttAvailable ? textMetrics.cpmTotal : null,
-      characters_per_minute_speech: sttAvailable ? textMetrics.cpmSpeech : null
+      filler_count: transcript ? textMetrics.fillerCount : null,
+      filler_per_minute: transcript ? textMetrics.fillerPerMinute : null,
+      repetition_count: transcript ? textMetrics.repetition : null,
+      restart_count: transcript ? textMetrics.restart : null,
+      self_correction_count: transcript ? textMetrics.selfCorrection : null,
+      character_count: transcript ? textMetrics.characterCount : null,
+      sentence_count: transcript ? textMetrics.sentenceCount : null,
+      characters_per_minute_total: transcript ? textMetrics.cpmTotal : null,
+      characters_per_minute_speech: transcript ? textMetrics.cpmSpeech : null
     },
     filler_detection: {
       method: 'TRANSCRIPT_HEURISTIC',
       estimated: true
     },
     stt: {
-      available: sttAvailable,
-      complete: sttAvailable && fx.interview.recognitionErrors.length === 0,
+      available: hasSpeech ? Boolean(transcript) : sttAvailable,
+      complete: sttAvailable && fx.interview.recognitionErrors.length === 0 && !options.truncated && (!hasSpeech || Boolean(transcript)),
       recognition_confidence: null,
       restart_count: fx.interview.recognitionRestarts,
       error_count: fx.interview.recognitionErrors.length,
@@ -996,10 +990,10 @@ async function fxFinishAnswer(options = {}) {
     data_quality: {
       timing: 'GOOD',
       vad: fx.analyser ? 'PARTIAL' : 'UNAVAILABLE',
-      stt: !sttAvailable ? 'UNAVAILABLE' : fx.interview.recognitionErrors.length ? 'PARTIAL' : 'GOOD',
+      stt: !sttAvailable || (hasSpeech && !transcript) ? 'UNAVAILABLE' : fx.interview.recognitionErrors.length ? 'PARTIAL' : 'GOOD',
       recording: audioBlob ? (fx.interview.recordingError ? 'PARTIAL' : 'GOOD') : session.config.recordingEnabled ? 'LOW' : 'UNAVAILABLE'
     },
-    runtime_signal: null,
+    runtime_signals: [],
     recording: {
       available: Boolean(audioBlob),
       file: audioBlob ? fx.phase1Api.recordingFile(question.question_id, audioBlob.type) : null,
@@ -1107,7 +1101,8 @@ function fxSummary(session) {
   const correction = nonNull(q => q.speech_metrics.self_correction_count);
   const cpmTotal = nonNull(q => q.speech_metrics.characters_per_minute_total);
   const cpmSpeech = nonNull(q => q.speech_metrics.characters_per_minute_speech);
-  const totalMinutes = answerDur.length ? sum(answerDur) / 60000 : 0;
+  const fillerQuestions = qs.filter(q => q.speech_metrics.filler_count !== null && q.speech_metrics.filler_count !== undefined && q.timing.speech_duration_ms > 0);
+  const fillerMinutes = sum(fillerQuestions.map(q => q.timing.speech_duration_ms)) / 60000;
   return {
     total_answer_duration_ms: answerDur.length ? Math.round(sum(answerDur)) : null,
     total_speech_duration_ms: speechDur.length ? Math.round(sum(speechDur)) : null,
@@ -1120,7 +1115,7 @@ function fxSummary(session) {
     total_pause_3000ms_count: pause3.length ? sum(pause3) : null,
     session_longest_pause_ms: longest.length ? Math.round(Math.max(...longest)) : null,
     total_filler_count: filler.length ? sum(filler) : null,
-    filler_per_minute: filler.length && totalMinutes ? sum(filler) / totalMinutes : null,
+    filler_per_minute: fillerMinutes ? sum(fillerQuestions.map(q => q.speech_metrics.filler_count)) / fillerMinutes : null,
     total_restart_count: restart.length ? sum(restart) : null,
     total_self_correction_count: correction.length ? sum(correction) : null,
     mean_characters_per_minute_total: cpmTotal.length ? mean(cpmTotal) : null,
@@ -1135,26 +1130,73 @@ function fxSummary(session) {
   };
 }
 
-function fxHandoffQuestion(question) {
+function fxSessionSourcePack(session) {
+  const record = fx.packs.find(p => p.sha256 === session.pack_sha256 && p.pack.pack_id === session.pack_id);
+  const bytes = session.pack_raw_bytes instanceof Uint8Array ? session.pack_raw_bytes : record?.rawBytes || null;
+  let pack = record?.pack || null;
+  if (!pack && bytes) {
+    try { pack = JSON.parse(new TextDecoder().decode(bytes)); } catch (_) {}
+  }
+  return { bytes, pack };
+}
+
+function fxHandoffQuestion(question, pack = null) {
   const clone = { ...question };
   delete clone.audio_blob;
   delete clone.raw_energy_segments;
+  delete clone.student_record_anchor;
+  delete clone.student_record_excerpt;
+  delete clone.runtime_signal;
+  const sourceQuestion = pack?.question_bank?.find(q => q.question_id === question.question_id);
+  clone.record_evidence = question.record_evidence || (question.evidence_ids || []).map(id => pack?.record_evidence?.find(e => e.evidence_id === id)).filter(Boolean);
+  clone.pack_primary_text = question.pack_primary_text ?? sourceQuestion?.primary_text ?? null;
+  clone.runtime_signals = question.runtime_signals || (question.runtime_signal && !['ALWAYS_ELIGIBLE', 'AFTER_PARENT'].includes(question.runtime_signal.type) ? [question.runtime_signal] : []);
+  clone.answer_transcript = typeof question.answer_transcript === 'string' && question.answer_transcript.trim() ? question.answer_transcript : null;
+  clone.stt = { ...question.stt };
+  clone.speech_metrics = { ...question.speech_metrics };
+  clone.data_quality = { ...question.data_quality };
+  if (clone.answer_status === 'ANSWERED' && clone.answer_transcript === null) {
+    clone.answer_status = 'STT_UNAVAILABLE';
+    clone.stt.available = false;
+    clone.stt.complete = false;
+    clone.data_quality.stt = 'UNAVAILABLE';
+  }
+  if (clone.answer_status === 'STT_UNAVAILABLE') {
+    clone.answer_transcript = null;
+    clone.stt.available = false;
+    clone.stt.complete = false;
+    clone.data_quality.stt = 'UNAVAILABLE';
+  }
+  if (['NO_ANSWER', 'USER_SKIPPED'].includes(clone.answer_status)) clone.answer_transcript = null;
+  if (clone.answer_transcript === null) {
+    for (const key of ['filler_count', 'filler_per_minute', 'repetition_count', 'restart_count', 'self_correction_count', 'character_count', 'sentence_count', 'characters_per_minute_total', 'characters_per_minute_speech']) clone.speech_metrics[key] = null;
+  } else {
+    clone.speech_metrics.filler_per_minute = clone.speech_metrics.filler_count !== null && clone.timing.speech_duration_ms > 0 ? clone.speech_metrics.filler_count / (clone.timing.speech_duration_ms / 60000) : null;
+  }
+  if (['CUT_OFF', 'TECHNICAL_FAILURE'].includes(clone.answer_status)) clone.stt.complete = false;
+  clone.recording = question.audio_blob instanceof Blob && question.audio_blob.size > 0 ? { ...question.recording } : { available: false, file: null, mime_type: null };
   return clone;
 }
 
 function fxBuildHandoff(session) {
-  const packRecord = fx.packs.find(p => p.sha256 === session.pack_sha256) || fxCurrentPackRecord();
-  const summary = fxSummary(session);
+  const source = fxSessionSourcePack(session);
+  const questions = session.questions.map(question => fxHandoffQuestion(question, source.pack));
+  const summary = fxSummary({ ...session, questions });
+  const missing = questions.flatMap((q, index) => [!q.pack_primary_text ? `questions.${index}.pack_primary_text` : null, q.evidence_ids.length !== q.record_evidence.length ? `questions.${index}.record_evidence` : null].filter(Boolean));
+  const invalid = !/^[a-f0-9]{64}$/.test(session.pack_sha256 || '') || !session.session_id || !session.pack_id || (!session.config.ttsEnabled && ['TTS_ONLY', 'BLIND_AFTER_TTS'].includes(session.config.presentationMode));
+  if (!source.bytes) missing.push('interview-pack.json');
   return {
-    handoff_schema: 'INTERVIEW_EVAL_HANDOFF/1.1',
+    handoff_schema: 'INTERVIEW_EVAL_HANDOFF/1.2',
     session: {
       session_id: session.session_id,
       created_at: session.created_at,
       completed_at: session.completed_at,
       interview_duration_ms: session.interview_duration_ms,
       question_count: session.questions.length,
-      site_version: '0.2.0-test',
-      metrics_engine_version: '0.2.0-rms',
+      site_version: session.site_version || '0.2.0-test',
+      runtime_policy_version: session.runtime_policy_version || '0.2.0-weighted',
+      difficulty_engine_version: session.difficulty_engine_version || '0.2.0-presets',
+      metrics_engine_version: session.metrics_engine_version || '0.2.0-rms',
       language: 'ko-KR',
       session_seed: session.session_seed
     },
@@ -1178,18 +1220,18 @@ function fxBuildHandoff(session) {
       recording_enabled: session.config.recordingEnabled
     },
     summary,
-    questions: session.questions.map(fxHandoffQuestion),
+    questions,
     integrity: {
-      status: session.technical_errors.length || session.questions.some(q => q.data_quality.vad !== 'GOOD') ? 'PARTIAL' : 'VALID',
-      missing_fields: [],
-      stt_warning_questions: session.questions.filter(q => q.data_quality.stt === 'LOW' || q.data_quality.stt === 'UNAVAILABLE').map(q => q.question_id),
+      status: invalid ? 'INVALID' : missing.length || session.truncated || session.technical_errors.length || questions.some(q => q.data_quality.vad !== 'GOOD' || ['LOW', 'UNAVAILABLE'].includes(q.data_quality.stt)) ? 'PARTIAL' : 'VALID',
+      missing_fields: missing,
+      stt_warning_questions: questions.filter(q => q.data_quality.stt === 'LOW' || q.data_quality.stt === 'UNAVAILABLE').map(q => q.question_id),
       timing_warning_questions: [],
       vad_warning_questions: session.questions.map(q => q.question_id),
       manually_edited_transcript: false,
       manual_edit_log: [],
       session_truncated: Boolean(session.truncated),
-      technical_errors: session.technical_errors,
-      notes: session.notes
+      technical_errors: [...new Set(session.technical_errors)],
+      notes: [...new Set(session.notes)]
     }
   };
 }
@@ -1356,7 +1398,7 @@ function fxAnswersCsv(handoff) {
     question_id:q.question_id, sequence:q.sequence, interviewer_id:q.interviewer_id, relation:q.relation, root_question_id:q.root_question_id, parent_question_id:q.parent_question_id,
     question_type:q.question_type, question_intent:q.question_intent, question_text:q.question_text, pack_primary_text:q.pack_primary_text, cognitive_difficulty:q.cognitive_difficulty,
     priority:q.priority, coverage_tags:q.coverage_tags, recommended_answer_min_seconds:q.recommended_answer_seconds?.min ?? null, recommended_answer_max_seconds:q.recommended_answer_seconds?.max ?? null,
-    student_record_anchor:q.student_record_anchor, evidence_ids:q.evidence_ids, followup_trigger_type:q.followup_trigger?.type ?? null, followup_trigger_source_question_id:q.followup_trigger?.source_question_id ?? null,
+    student_record_anchor:q.record_evidence.map(e => e.anchor), evidence_ids:q.evidence_ids, followup_trigger_type:q.followup_trigger?.type ?? null, followup_trigger_source_question_id:q.followup_trigger?.source_question_id ?? null,
     answer_status:q.answer_status, answer_transcript:q.answer_transcript, presentation_mode:q.presentation.mode, question_visible_during_answer:q.presentation.question_visible_during_answer,
     question_replay_count:q.presentation.question_replay_count, preparation_time_ms:q.presentation.preparation_time_ms, response_latency_ms:q.timing.response_latency_ms,
     answer_duration_ms:q.timing.answer_duration_ms, speech_duration_ms:q.timing.speech_duration_ms, silence_duration_ms:q.timing.silence_duration_ms,
@@ -1376,8 +1418,30 @@ function fxEventsCsv(session) {
   return '\ufeff' + [columns.join(','), ...session.events.map(e => columns.map(column => fxEscapeCsv(e[column] ?? null)).join(','))].join('\r\n');
 }
 
+function fxHandoffEvents(session) {
+  return session.events.map(event => {
+    const out = { event_id: event.event_id, question_id: event.question_id, type: event.type, timestamp_ms: event.timestamp_ms };
+    if (event.type === 'PAUSE_END') out.duration_ms = event.duration_ms;
+    if (['PAUSE_START', 'PAUSE_END'].includes(event.type) && event.pair_id) out.pair_id = event.pair_id;
+    if (event.type === 'FILLER_DETECTED' && event.value) out.value = event.value;
+    if (event.type === 'STT_ERROR') out.metadata = { code: event.metadata?.code ?? event.value ?? null, message: event.metadata?.message ?? null };
+    return out;
+  });
+}
+
 async function fxExportSession(session) {
   const handoff = fxBuildHandoff(session);
+  const source = fxSessionSourcePack(session);
+  let sourceStatus = 'MISSING (PARTIAL)';
+  if (source.bytes) {
+    const hash = await fxSha256Bytes(source.bytes);
+    const valid = hash === session.pack_sha256 && source.pack?.pack_id === session.pack_id && source.pack?.schema === 'INTERVIEW_PACK/1.0';
+    sourceStatus = valid ? 'VERIFIED' : 'MISMATCH (INVALID)';
+    if (!valid) {
+      handoff.integrity.status = 'INVALID';
+      handoff.integrity.technical_errors.push('원본 질문팩의 SHA-256 또는 Pack 식별자가 세션 기록과 일치하지 않습니다.');
+    }
+  }
   const readme = [
     '# 面逆力 Result Package',
     '',
@@ -1385,11 +1449,21 @@ async function fxExportSession(session) {
     `session_id: ${session.session_id}`,
     `source pack: ${session.pack_id}`,
     `source pack SHA-256: ${session.pack_sha256}`,
+    `original interview-pack.json included: ${Boolean(source.bytes)}`,
+    `source pack verification: ${sourceStatus}`,
+    `site version: ${handoff.session.site_version}`,
+    `runtime policy version: ${handoff.session.runtime_policy_version}`,
+    `difficulty engine version: ${handoff.session.difficulty_engine_version}`,
+    `metrics engine version: ${handoff.session.metrics_engine_version}`,
     'canonical source: handoff.json',
     'event timestamp: session start = 0ms',
     'response latency: RESPONSE_WINDOW_START to first detected speech',
     'CSV encoding: UTF-8 with BOM',
-    `audio included: ${session.questions.some(q => q.recording.available) ? 'yes' : 'no'}`,
+    `audio included: ${handoff.questions.some(q => q.recording.available) ? 'yes' : 'no'}`,
+    'summary coverage: metrics count only questions with collected data',
+    'record_evidence: multiple original evidence snapshots per question',
+    'runtime_signals: multiple observed rules, not assessment results',
+    'null = not collected/not applicable; 0 = measured zero',
     '',
     '주의: 이 테스트 빌드는 Silero VAD가 연결되기 전 단계이며 RMS 기반 간이 발화 구간을 사용합니다. handoff.json의 environment.vad_mode은 DISABLED로 기록됩니다.'
   ].join('\n');
@@ -1397,11 +1471,12 @@ async function fxExportSession(session) {
     { name: 'handoff.json', data: JSON.stringify(handoff, null, 2) },
     { name: 'handoff.md', data: fxHandoffMarkdown(handoff) },
     { name: 'answers.csv', data: fxAnswersCsv(handoff) },
-    { name: 'events.json', data: JSON.stringify(session.events, null, 2) },
-    { name: 'events.csv', data: fxEventsCsv(session) },
+    { name: 'events.json', data: JSON.stringify(fxHandoffEvents(session), null, 2) },
+    { name: 'events.csv', data: fxEventsCsv({ ...session, events: fxHandoffEvents(session) }) },
     { name: 'transcript.md', data: fxTranscriptMarkdown(handoff) },
     { name: 'README.md', data: readme }
   ];
+  if (source.bytes) files.push({ name: 'interview-pack.json', data: source.bytes });
   for (const q of session.questions) if (q.audio_blob && q.recording.file) files.push({ name: q.recording.file, data: q.audio_blob });
   const zip = await fxZipStore(files);
   fxDownload(`myeonyeokryeok_result_${session.session_id}.zip`, zip);
@@ -1846,7 +1921,7 @@ resultPage = function() {
   }, 0);
   const header = `<div class="result-header"><div><h1>${session.truncated ? '면접을 종료했습니다.' : '면접 결과'}</h1><p>${fxFormatDuration(session.interview_duration_ms)} · 질문 ${session.questions.length}개 · 발화 ${fxFormatDuration(s.total_speech_duration_ms)}</p></div><button class="btn primary" data-export-zip>평가용 ZIP 저장</button></div>`;
   const stats = `<div class="stat-grid" style="margin-top:18px"><div class="stat-card"><div class="value">${s.mean_response_latency_ms === null ? 'N/A' : (s.mean_response_latency_ms / 1000).toFixed(1) + '초'}</div><div class="label">평균 답변 시작</div></div><div class="stat-card"><div class="value">${s.total_answer_duration_ms ? Math.round(s.total_answer_duration_ms / Math.max(1, session.questions.length) / 1000) + '초' : 'N/A'}</div><div class="label">평균 답변 길이</div></div><div class="stat-card"><div class="value">${s.total_pause_2000ms_count ?? 'N/A'}</div><div class="label">2초 이상 정지</div></div><div class="stat-card"><div class="value">${s.mean_characters_per_minute_total === null ? 'N/A' : Math.round(s.mean_characters_per_minute_total)}</div><div class="label">평균 분당 글자</div></div></div>`;
-  return appShell(`${header}${session.save_error ? `<div class="notice danger" role="alert">${safe(session.save_error)}</div>` : ''}${state.resultTab === 'overview' ? fxRecordingsMarkup(session) : ''}${stats}<div class="tabs" role="tablist" aria-label="면접 결과">${tabs.map(([key,label]) => `<button type="button" role="tab" aria-selected="${state.resultTab===key}" class="tab ${state.resultTab === key ? 'active' : ''}" data-tab="${key}">${label}</button>`).join('')}</div>${fxResultContent(session)}<details class="result-tools"><summary>다시 연습·추가 자료</summary><div class="secondary-actions"><button class="btn secondary" data-nav="/app/packs">새 면접 준비</button><a class="btn secondary" href="./core_md/학생부기반_실전면접_평가엔진_v1.2_FINAL.md" download>평가 엔진 받기</a><button class="btn ghost" id="downloadHandoff">원본 기록 JSON</button><button class="btn ghost" data-nav="/app/compare">최근 기록 비교</button></div></details>`,'history');
+  return appShell(`${header}${session.save_error ? `<div class="notice danger" role="alert">${safe(session.save_error)}</div>` : ''}${state.resultTab === 'overview' ? fxRecordingsMarkup(session) : ''}${stats}<div class="tabs" role="tablist" aria-label="면접 결과">${tabs.map(([key,label]) => `<button type="button" role="tab" aria-selected="${state.resultTab===key}" class="tab ${state.resultTab === key ? 'active' : ''}" data-tab="${key}">${label}</button>`).join('')}</div>${fxResultContent(session)}<details class="result-tools"><summary>다시 연습·추가 자료</summary><div class="secondary-actions"><button class="btn secondary" data-nav="/app/packs">새 면접 준비</button><a class="btn secondary" href="./core_md/evaluation-engine-v1.4.md" download>평가 엔진 받기</a><button class="btn ghost" id="downloadHandoff">원본 기록 JSON</button><button class="btn ghost" data-nav="/app/compare">최근 기록 비교</button></div></details>`,'history');
 };
 
 function fxResultContent(session) {

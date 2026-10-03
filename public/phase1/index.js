@@ -4396,7 +4396,7 @@ var mc = $o().trim().min(1), hc = (e = 0, t) => {
 	});
 }, gc = $o().refine((e) => !Number.isNaN(Date.parse(e)), { message: "유효한 ISO-8601 날짜/시간이어야 합니다." }), _c = X({
 	engine_name: Q("학생부기반_공통_실전면접_질문엔진"),
-	engine_version: Q("1.0"),
+	engine_version: Z(["1.0", "1.2"]),
 	created_at: gc,
 	language: Q("ko-KR")
 }).strict(), vc = X({

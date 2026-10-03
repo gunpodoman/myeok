@@ -33,7 +33,7 @@ const isoDateTime = z.string().refine(value => !Number.isNaN(Date.parse(value)),
 
 export const generatorSchema = z.object({
   engine_name: z.literal('학생부기반_공통_실전면접_질문엔진'),
-  engine_version: z.literal('1.0'),
+  engine_version: z.enum(['1.0', '1.2']),
   created_at: isoDateTime,
   language: z.literal('ko-KR')
 }).strict();

@@ -8,4 +8,18 @@ describe('질문 엔진 대표 샘플', () => {
 
     expect(result.ok, result.issues.map(issue => `${issue.code}: ${issue.message}`).join('\n')).toBe(true);
   });
+
+  it('최신 질문 엔진 1.2 Pack도 기존 폐쇄형 계약으로 가져온다', () => {
+    const pack = structuredClone(samplePack);
+    pack.generator.engine_version = '1.2';
+    const result = validateInterviewPack(pack);
+    expect(result.ok, result.issues.map(issue => issue.message).join('\n')).toBe(true);
+    expect(result.pack?.generator.engine_version).toBe('1.2');
+  });
+
+  it('알 수 없는 엔진 버전은 여전히 거부한다', () => {
+    const pack = structuredClone(samplePack);
+    pack.generator.engine_version = '99.0';
+    expect(validateInterviewPack(pack).ok).toBe(false);
+  });
 });

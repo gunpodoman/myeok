@@ -493,7 +493,11 @@ try {
   const evaluationZip = storedZipEntries(await readFile(path.join(downloadDir, files[0])));
   const handoff = JSON.parse(evaluationZip.get('handoff.json').toString('utf8'));
   check('평가 ZIP도 동일한 원본 녹음 포함',report.recordings.every(r=>evaluationZip.has(r.file)&&sha256(evaluationZip.get(r.file))===r.sha256));
-  check('HANDOFF 1.1 계약/오디오 파일 참조 유지',handoff.handoff_schema==='INTERVIEW_EVAL_HANDOFF/1.1'&&handoff.questions.length===report.recordings.length&&handoff.questions.every(q=>q.recording.available&&evaluationZip.has(q.recording.file)&&!('audio_blob' in q)));
+  check('HANDOFF 1.2 계약/오디오 파일 참조 유지',handoff.handoff_schema==='INTERVIEW_EVAL_HANDOFF/1.2'&&handoff.questions.length===report.recordings.length&&handoff.questions.every(q=>q.recording.available&&evaluationZip.has(q.recording.file)&&!('audio_blob' in q)));
+  check('HANDOFF 1.2 원본 질문팩 bytes/SHA-256 보존',evaluationZip.has('interview-pack.json')&&sha256(evaluationZip.get('interview-pack.json'))===handoff.source_pack.sha256);
+  check('HANDOFF 1.2 근거 snapshot/신호 배열',handoff.questions.every(q=>Array.isArray(q.record_evidence)&&q.record_evidence.length===q.evidence_ids.length&&Array.isArray(q.runtime_signals)&&!('runtime_signal' in q)&&!('student_record_anchor' in q)));
+  check('빈 전사를 정상 답변으로 내보내지 않음',handoff.questions.every(q=>q.answer_transcript!==''&&(q.answer_status!=='ANSWERED'||q.answer_transcript)));
+  check('질문 엔진 1.2 원본을 실제 면접/평가에 사용',handoff.source_pack.generator_version==='1.2'&&JSON.parse(evaluationZip.get('interview-pack.json').toString('utf8')).generator.engine_version==='1.2');
   report.exportInspection={recordingZip:[...recordingZip.keys()],evaluationZip:[...evaluationZip.keys()],handoffSchema:handoff.handoff_schema,audioBytesIdentical:true};
   step('녹음 끄기/기능 미지원 상태 확인');
   await evaluate("fx.config.recordingEnabled=false;go('/app/device-test')");

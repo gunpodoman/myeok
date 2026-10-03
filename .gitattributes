@@ -1,0 +1,4 @@
+# Preserve the supplied engine documents byte-for-byte across platforms.
+core_md/question-engine-v1.2.md -text
+core_md/evaluation-engine-v1.4.md -text
+core_md/evaluation-handoff-v1.2.md -text
