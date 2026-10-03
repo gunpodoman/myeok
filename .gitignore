@@ -1,0 +1,14 @@
+node_modules/
+dist/
+local_runtime/
+.agent/
+release/
+.env
+.env.*
+!.env.example
+__pycache__/
+*.pyc
+*.wav
+*.webm
+*.m4a
+*.ogg
