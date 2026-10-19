@@ -219,3 +219,13 @@
 
 - 이번 요청(최신 엔진 교체·Git 백업·Pages 게시)의 기능/배포 작업은 완료했다.
 - 이전 기본 TTS 출력/물리 마이크 사용자 확인 사항은 그대로다. 엔진 파일 교체가 외부 AI의 실제 생성/평가 품질 검증을 대신하지 않는다.
+
+## 2026-10-19 — 메인 엔진 다운로드 가시성
+
+- `app.js`: `/`와 `/home`의 큰 로고 영역을 질문 생성 엔진 v1.2와 답변 평가 엔진 v1.4의 다운로드 카드로 교체했다. 면접 전/후, 첨부할 자료, 버전과 파일 형식을 안내하고 메인에서 MD 원문을 바로 받는다.
+- `styles.css`: 기존 색상과 면접 준비 CTA를 유지하고 PC·모바일 여백, 카드, 전체 너비 다운로드 버튼과 키보드 포커스를 조정했다. 실제 390×844 화면에서도 두 다운로드 버튼이 보이는 것을 직접 확인했다.
+- `scripts/browser-smoke.mjs`: 메인에서 두 엔진을 실제 다운로드하여 원본 SHA-256과 비교하고 Home 별칭도 확인한다. 엔진 원문과 면접/녹음/저장 Runtime은 변경하지 않았다.
+- PASS — 타입 검사, 7 files/57 단위 테스트, 로컬 및 `/myeok/` Pages base 빌드, JS syntax와 diff 검사. Vitest의 샌드박스 임시 경로 접근 실패는 일반 실행 환경 재검사에서 통과했다.
+- PASS — 최종 Chrome production 83 checks, Vite dev 87 checks, 페이지/console 오류 0. dev의 첫 병렬 실행은 기존 600ms 다운로드 대기에서 실패했으며, 단독 재실행에서 녹음 원문/ZIP 다운로드와 기존 회귀 검사까지 통과했다.
+- PASS — PC·모바일 실제 화면 직접 검토, 메인 엔진 다운로드 원문 bytes 보존. Pages base의 실제 브라우저 메인과 엔진 링크 경로도 확인했다.
+- BLOCKED — 기존 GitHub 계정이 연결되어 있지 않아 `git push --dry-run origin HEAD:refs/heads/main`이 `could not read Username`으로 실패했다. 원격 main/Pages에는 반영하지 않았으며 로컬 commit/새 tag와 소스 ZIP으로 보존한다. GitHub 로그인 후 저장소 절차에 따라 push하면 된다.

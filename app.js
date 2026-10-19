@@ -100,7 +100,21 @@ function home() {
     <p class="home-lead">나의 학생부에서 시작하는 질문.<br>실제처럼 답하고, 내 목소리로 다시 돌아보세요.</p>
     <div class="home-actions"><a class="btn primary" href="/app/packs" data-nav="/app/packs">면접 준비하기 <span aria-hidden="true">↗</span></a><a class="home-text-link" href="/create-pack" data-nav="/create-pack">질문팩이 처음이라면 <span aria-hidden="true">→</span></a></div>
     <p class="home-note">회원가입 없이 · 질문팩과 녹음은 이 브라우저에 저장</p>
-  </div><div class="home-brand-art"><div class="home-art-frame"><img src="./assets/myeok-logo.svg" alt="面逆力"><span class="home-art-caption">면접으로 역전하는 능력</span></div><span class="home-art-label" aria-hidden="true">PRACTICE. LISTEN. GROW.</span></div></section>
+  </div><section class="home-engines" aria-labelledby="homeEnginesTitle">
+    <div class="home-engines-heading"><h2 id="homeEnginesTitle">필요한 엔진을 바로 받으세요</h2><p>파일을 받아 ChatGPT에 첨부하면 됩니다.</p></div>
+    <article class="home-engine-card">
+      <div class="home-engine-meta"><span>01 · 면접 전</span><span>MD · v1.2</span></div>
+      <h3>질문 생성 엔진</h3>
+      <p>학생부와 함께 첨부해<br>나에게 맞는 질문팩을 만드세요.</p>
+      <a class="home-engine-download" href="./core_md/question-engine-v1.2.md" download="question-engine-v1.2.md">질문엔진 다운로드 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M5 16v4h14v-4"/></svg></a>
+    </article>
+    <article class="home-engine-card">
+      <div class="home-engine-meta"><span>02 · 면접 후</span><span>MD · v1.4</span></div>
+      <h3>답변 평가 엔진</h3>
+      <p>면접 후 저장한 평가용 ZIP과 함께 첨부해<br>답변의 강점과 보완점을 확인하세요.</p>
+      <a class="home-engine-download" href="./core_md/evaluation-engine-v1.4.md" download="evaluation-engine-v1.4.md">평가엔진 다운로드 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M5 16v4h14v-4"/></svg></a>
+    </article>
+  </section></section>
   <section class="home-process container" aria-label="연습 흐름">${[
     ['01','나에게 맞는 질문','학생부로 만든 질문팩을 가져옵니다.'],['02','실전처럼 답하기','목소리와 면접 환경을 고르고 연습합니다.'],['03','내 답변 다시 듣기','녹음을 재생하고 저장하며 다음 답변을 준비합니다.']
   ].map(([n,title,description])=>`<div class="home-step"><span>${n}</span><div><h2>${title}</h2><p>${description}</p></div></div>`).join('')}</section>

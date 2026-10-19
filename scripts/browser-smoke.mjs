@@ -264,7 +264,13 @@ try {
   step('메인 화면과 질문팩 진입 확인');
   await waitFor("typeof fx !== 'undefined' && Boolean(fx.phase1) && state.importStatus === 'READY' && location.pathname === '/'");
   check('실제 메인 화면',await evaluate("Boolean(document.querySelector('#homeTitle')) && document.querySelector('.home-actions .primary').getAttribute('data-nav')==='/app/packs'"));
-  await waitFor("document.querySelector('.home-art-frame img')?.naturalWidth > 0");
+  for (const name of ['question-engine-v1.2.md', 'evaluation-engine-v1.4.md']) {
+    await evaluate(`document.querySelector('.home-engines a[download="${name}"]').click()`);
+    const file = path.join(downloadDir, name);
+    const deadline = Date.now() + 12000;
+    while (!existsSync(file) && Date.now() < deadline) await sleep(100);
+    check(`메인에서 ${name} 원문 다운로드`, existsSync(file) && sha256(await readFile(file)) === sha256(await readFile(path.join(root, 'core_md', name))));
+  }
   await screenshot('01-home.png');
   await send('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 1, mobile: true });
   await screenshot('home-mobile.png');
@@ -285,7 +291,7 @@ try {
     check(`라우트 ${route}`, await waitFor("document.querySelector('#app')?.innerText.trim().length > 20"));
     if (captureBaseline || captureUi) await screenshot(`route-${route.replaceAll('/', '_')}.png`);
     if (route === '/create-pack') await screenshot('01b-create-pack.png');
-    if (route === '/home') check('Home 별칭/SVG 로드', await waitFor("document.querySelector('.home-art-frame img')?.naturalWidth > 0"));
+    if (route === '/home') check('Home 별칭의 엔진 다운로드', await evaluate("document.querySelectorAll('.home-engines a[download]').length === 2"));
   }
 
   step('첫 Pack 가져오기');

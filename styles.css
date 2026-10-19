@@ -421,7 +421,7 @@ button, input, select, textarea { font: inherit; }
 
 /* A concise, calm entry point; keep the working surfaces compact. */
 .home-main { overflow: hidden; }
-.home-hero { display: grid; grid-template-columns: 1.2fr 1fr; align-items: center; gap: 52px; padding-top: 74px; padding-bottom: 82px; }
+.home-hero { display: grid; grid-template-columns: 1.2fr 1fr; align-items: center; gap: 52px; padding-top: 48px; padding-bottom: 48px; }
 .home-eyebrow { display: flex; align-items: center; gap: 9px; font-size: 13px; font-weight: 700; color: var(--accent); margin: 0 0 24px; }
 .home-eyebrow > span { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); }
 .home-copy h1 { font-size: clamp(38px, 4.5vw, 58px); line-height: 1.26; letter-spacing: -.065em; margin: 0; font-weight: 800; }
@@ -434,13 +434,18 @@ button, input, select, textarea { font: inherit; }
 .home-text-link span { margin-left: 8px; color: var(--accent); }
 .home-text-link:hover, .workspace-home:hover { color: var(--accent); }
 .home-note { font-size: 12px; color: var(--muted); margin: 24px 0 0; line-height: 1.8; }
-.home-brand-art { position: relative; min-height: 355px; display: grid; place-items: center; }
-.home-brand-art:before { content: ''; position: absolute; width: 95%; height: 100%; border-radius: 50%; background: radial-gradient(ellipse, #e3e9fd 0%, transparent 68%); }
-.home-art-frame { position: relative; width: 90%; padding: 36px 30px 27px; background: rgba(255,255,255,.68); border: 1px solid #d6deef; border-radius: 24px; transform: rotate(-4deg); box-shadow: 0 20px 60px rgba(40,63,125,.04); box-sizing: border-box; }
-.home-art-frame:before { content: ''; position: absolute; inset: 12px -13px -12px 13px; border: 1px solid #cfd9ed; border-radius: 24px; z-index: -1; }
-.home-art-frame img { width: 100%; height: 185px; object-fit: contain; mix-blend-mode: multiply; }
-.home-art-caption { display: block; text-align: center; font-size: 12px; color: var(--muted); letter-spacing: .16em; margin-top: 8px; }
-.home-art-label { position: absolute; bottom: 0; font-size: 10px; color: var(--muted); letter-spacing: .18em; }
+.home-engines { display: grid; gap: 14px; min-width: 0; }
+.home-engines-heading h2 { margin: 0; font-size: 21px; line-height: 1.4; letter-spacing: -.04em; }
+.home-engines-heading p { margin: 7px 0 4px; font-size: 13px; line-height: 1.7; color: var(--muted); }
+.home-engine-card { padding: 22px 24px; border: 1px solid #cbd5f0; border-radius: 18px; background: var(--surface); box-shadow: 0 6px 22px rgba(40,63,125,.035); }
+.home-engine-meta { display: flex; justify-content: space-between; gap: 12px; font-size: 11px; font-weight: 700; line-height: 1.6; color: var(--accent); }
+.home-engine-meta > span:last-child { color: var(--muted); font-weight: 500; }
+.home-engine-card h3 { font-size: 21px; letter-spacing: -.04em; margin: 10px 0 8px; line-height: 1.4; }
+.home-engine-card p { margin: 0 0 18px; color: var(--muted); font-size: 13px; line-height: 1.7; word-break: keep-all; }
+.home-engine-download { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 46px; padding: 0 16px; border-radius: 10px; background: var(--accent); color: white; font-size: 14px; font-weight: 700; }
+.home-engine-download:hover { background: #2948c3; }
+.home-engine-download:focus-visible { outline: 3px solid var(--ink); outline-offset: 4px; }
+.home-engine-download svg { flex-shrink: 0; }
 .home-process { display: grid; grid-template-columns: repeat(3, 1fr); gap: 34px; padding-top: 28px; padding-bottom: 40px; border-top: 1px solid var(--line); }
 .home-step { display: flex; gap: 16px; }
 .home-step > span { font-size: 11px; color: var(--accent); padding-top: 5px; font-weight: 800; }
@@ -524,10 +529,17 @@ button, input, select, textarea { font: inherit; }
   .home-hero { grid-template-columns: minmax(0,1fr); padding-top: 44px; padding-bottom: 38px; gap: 20px; }
   .home-copy h1 { font-size: clamp(34px, 8.3vw, 48px); }
   .home-lead { font-size: 15px; margin-top: 20px; }
-  .home-brand-art { min-height: 245px; }
-  .home-art-frame { max-width: 350px; padding: 20px 24px; }
-  .home-art-frame img { height: 125px; }
-  .home-art-label { font-size: 9px; }
+  .home-hero { padding-top: 24px; gap: 24px; }
+  .home-eyebrow { margin-bottom: 12px; }
+  .home-lead { font-size: 14px; line-height: 1.7; margin: 14px 0 18px; }
+  .home-note { margin-top: 12px; font-size: 11px; }
+  .home-actions { gap: 16px; }
+  .home-actions .btn { padding: 14px 18px; }
+  .home-engines-heading h2 { font-size: 19px; }
+  .home-engines { gap: 12px; }
+  .home-engine-card { padding: 16px; }
+  .home-engine-card h3 { font-size: 19px; margin: 6px 0; }
+  .home-engine-card p { margin-bottom: 12px; }
   .home-process { grid-template-columns: minmax(0,1fr); gap: 22px; padding-top: 26px; padding-bottom: 30px; }
   .topbar .brand-sub { display: none; }
   .nav-cta { font-size: 12px; padding: 10px 12px; }

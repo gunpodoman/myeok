@@ -1,5 +1,12 @@
 # Tasks
 
+## 2026-10-19 — 메인 엔진 다운로드 가시성
+
+- [x] 메인 상단에 질문엔진 v1.2·평가엔진 v1.4 다운로드 카드와 용도 안내
+- [x] PC·모바일 화면 확인, 실제 다운로드 원문 SHA-256 검증
+- [x] 타입/57 단위 테스트/로컬·Pages 빌드/production 83·dev 87 브라우저 checks
+- [ ] BLOCKED: GitHub push·Pages 재배포 — 현재 환경에 GitHub 로그인 정보가 없음
+
 ## PHASE 1 — 완료
 
 - [x] 저장소 truth, baseline, 복구 ZIP 기록
