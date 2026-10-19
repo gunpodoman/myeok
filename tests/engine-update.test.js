@@ -51,7 +51,7 @@ function sessionFixture() {
 
 describe('최신 엔진 배포 연결', () => {
   it.each([
-    ['question-engine-v1.2.md', '2C34CE4F2C925ED241A71581D3AAABBDA90DA859A848E1815A87E1273B5B81D3'],
+    ['question-engine-v1.4.1.md', '5068390D84B779D1493FDF818F7CF31ED238CEBF3F1BDB03DA4C369AEBA91D7D'],
     ['evaluation-engine-v1.4.md', '19025D938DDAC2E5ED924AD39D7CBFEE77D89CE11ABB1084CFA48823A3EA4F2C'],
     ['evaluation-handoff-v1.2.md', '53B2DD79288507A238D0BD9B866C787E5A268B854DD36E4911B9ABA5743C11F2']
   ])('%s는 사용자 제공 원본 bytes를 보존한다', (name, hash) => {
@@ -60,10 +60,10 @@ describe('최신 엔진 배포 연결', () => {
 
   it('실제 다운로드 링크는 최신 엔진을 가리키고 구버전은 제거한다', () => {
     const app = readFileSync('app.js', 'utf8');
-    expect(app).toContain('./core_md/question-engine-v1.2.md');
+    expect(app).toContain('./core_md/question-engine-v1.4.1.md');
     expect(app).toContain('./core_md/evaluation-engine-v1.4.md');
     expect(runtime).toContain('./core_md/evaluation-engine-v1.4.md');
-    for (const old of ['학생부기반_공통_실전면접_질문엔진_v1.0_FINAL.md', '학생부기반_실전면접_평가엔진_v1.2_FINAL.md', '면접_평가_핸드오프_규격_v1.1_FINAL.md']) {
+    for (const old of ['question-engine-v1.2.md', '학생부기반_공통_실전면접_질문엔진_v1.0_FINAL.md', '학생부기반_실전면접_평가엔진_v1.2_FINAL.md', '면접_평가_핸드오프_규격_v1.1_FINAL.md']) {
       expect(existsSync(`core_md/${old}`)).toBe(false);
       expect(app + runtime).not.toContain(old);
     }

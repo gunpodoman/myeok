@@ -8,7 +8,7 @@ PHASE 1은 2026-09-27에 완료됐고 2026-09-28 실제 사용자 안정화 패�
 
 목소리 설정과 녹음 lifecycle은 `src/phase1/speech.ts`, `recording.ts`에서 지원한다. 음성 선택은 실제 한국어 목록만 사용하고 없는 성별은 안내한다. 긴 질문 분할·재생 실패 watchdog·화면 대체를 유지한다. 녹음은 마지막 dataavailable/stop 이후 질문 Blob으로 저장하며 중도 종료와 자연 종료를 처리한다. Result에서 재생·개별 파일·녹음 ZIP·기존 평가 ZIP을 제공하고 객체 URL을 해제한다. 기존 Session store에 Blob을 비파괴 보존한다.
 
-제품 규격은 `core_md`의 4개 문서다. 최신 사용자 제공본으로 질문 엔진 v1.2, 평가 엔진 v1.4, HANDOFF v1.2를 교체했다. 파일명은 `question-engine-v1.2.md`, `evaluation-engine-v1.4.md`, `evaluation-handoff-v1.2.md`이며 원문 bytes는 보존한다. 마스터가이드 v4.0은 그대로다. Pack schema는 1.0, generator는 기존 1.0/최신 1.2를 허용한다. 평가 ZIP은 HANDOFF 1.2와 원본 질문팩/복수 근거 snapshot/배열 신호를 내보내며 기존 저장 세션은 비파괴 변환한다. 실제 사이트 runtime/difficulty 버전은 기존 weighted/presets 구현을 정직하게 기록하며 문서 부록의 신규 정책 전체 구현으로 주장하지 않는다. 개발 운영 규칙은 `harness_v8.txt`다. `CODEX_PHASE1_PROMPT.md`는 PHASE 1의 범위와 완료 상태를 기록한다.
+제품 규격은 `core_md`의 4개 문서다. 최신 사용자 제공본으로 질문 엔진 문서 v1.4.1, 평가 엔진 v1.4, HANDOFF v1.2를 교체했다. 파일명은 `question-engine-v1.4.1.md`, `evaluation-engine-v1.4.md`, `evaluation-handoff-v1.2.md`이며 원문 bytes는 보존한다. 마스터가이드 v4.0은 그대로다. Pack schema는 1.0, generator는 기존 1.0/최신 1.2를 허용한다. 평가 ZIP은 HANDOFF 1.2와 원본 질문팩/복수 근거 snapshot/배열 신호를 내보내며 기존 저장 세션은 비파괴 변환한다. 실제 사이트 runtime/difficulty 버전은 기존 weighted/presets 구현을 정직하게 기록하며 문서 부록의 신규 정책 전체 구현으로 주장하지 않는다. 개발 운영 규칙은 `harness_v8.txt`다. `CODEX_PHASE1_PROMPT.md`는 PHASE 1의 범위와 완료 상태를 기록한다.
 
 현재 기본 앱은 `index.html` + `app.js` + `runtime.js`다. Pack/Settings의 canonical 구현은 `src/phase1` TypeScript/Zod/Dexie 계층이고, 브라우저에는 `public/phase1/index.js`로 연결된다. `src/react`와 `react-foundation.html`은 안전한 병행 전환 기반으로만 존재한다.
 

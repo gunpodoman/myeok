@@ -6,7 +6,9 @@
 
 학생부 기반 `INTERVIEW_PACK/1.0`으로 면접을 연습하고, 내 답변을 녹음해 다시 듣는 로컬 우선 웹 앱이다. 사용자의 실제 한국어 청취 결과에 따라 실험 모델은 폐기하고 기본 브라우저 TTS로 확정했다. 간결한 메인 화면에서 질문팩 → 설정 → 환경 점검 → 면접 → 녹음 복기로 이어진다.
 
-메인(`/`, `/home`) 상단에서 **질문엔진 v1.2**와 **평가엔진 v1.4**를 바로 다운로드할 수 있다. 질문엔진은 학생부와, 평가엔진은 면접 후 저장한 평가용 ZIP과 함께 ChatGPT에 첨부한다.
+메인(`/`, `/home`) 상단에서 **질문엔진 v1.4.1**과 **평가엔진 v1.4**를 바로 다운로드할 수 있다. 질문엔진은 학생부와, 평가엔진은 면접 후 저장한 평가용 ZIP과 함께 ChatGPT에 첨부한다.
+
+질문엔진 v1.4.1은 생성 지침 문서의 버전이다. 생성되는 질문팩은 기존 `INTERVIEW_PACK/1.0`과 `generator.engine_version: "1.2"`를 유지한다.
 
 ## 현재 authoritative 앱
 
@@ -108,4 +110,4 @@ Silero VAD는 아직 연결하지 않았다. 현재 발화 구간은 RMS 기반�
 
 기본 TTS 확정은 현재 결정이다. 폐기한 neural 모델을 다시 설치하거나 연결하지 않는다. React 전체 이전, STT 교체, Silero 신규 작업, Passive Filler Observation은 이번 작업 범위가 아니다. 현재 React foundation은 준비 자산일 뿐 기본 앱이 아니다.
 
-제품 명세는 `core_md`의 4개 문서다. 현재 질문 엔진은 `question-engine-v1.2.md`, 평가 엔진은 `evaluation-engine-v1.4.md`, 평가 데이터 계약은 `evaluation-handoff-v1.2.md`다. 사용자 제공 FINAL QA 수정본의 내용은 그대로 유지하며 구버전 3종은 이전 Git 버전에서 복구할 수 있다. 질문팩 schema는 `INTERVIEW_PACK/1.0`을 유지하고 generator 1.0/1.2를 함께 지원한다. 학생부 분석 마스터가이드 v4.0은 변경하지 않았다. 작업 상태와 검증 증거는 `.agent/STATE.md`, `docs/WORKLOG.md`, `.agent/verification`에 있다.
+제품 명세는 `core_md`의 4개 문서다. 현재 질문 엔진은 `question-engine-v1.4.1.md`, 평가 엔진은 `evaluation-engine-v1.4.md`, 평가 데이터 계약은 `evaluation-handoff-v1.2.md`다. 사용자 제공 FINAL QA 수정본의 내용은 그대로 유지하며 구버전 3종은 이전 Git 버전에서 복구할 수 있다. 질문팩 schema는 `INTERVIEW_PACK/1.0`을 유지하고 generator 1.0/1.2를 함께 지원한다. 학생부 분석 마스터가이드 v4.0은 변경하지 않았다. 작업 상태와 검증 증거는 `.agent/STATE.md`, `docs/WORKLOG.md`, `.agent/verification`에 있다.

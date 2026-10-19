@@ -229,3 +229,11 @@
 - PASS — 최종 Chrome production 83 checks, Vite dev 87 checks, 페이지/console 오류 0. dev의 첫 병렬 실행은 기존 600ms 다운로드 대기에서 실패했으며, 단독 재실행에서 녹음 원문/ZIP 다운로드와 기존 회귀 검사까지 통과했다.
 - PASS — PC·모바일 실제 화면 직접 검토, 메인 엔진 다운로드 원문 bytes 보존. Pages base의 실제 브라우저 메인과 엔진 링크 경로도 확인했다.
 - BLOCKED — 기존 GitHub 계정이 연결되어 있지 않아 `git push --dry-run origin HEAD:refs/heads/main`이 `could not read Username`으로 실패했다. 원격 main/Pages에는 반영하지 않았으며 로컬 commit/새 tag와 소스 ZIP으로 보존한다. GitHub 로그인 후 저장소 절차에 따라 push하면 된다.
+
+## 2026-10-19 — 첨부 질문엔진 v1.4.1·평가엔진 v1.4 반영
+
+- 사용자 지정 원본을 `core_md/question-engine-v1.4.1.md`, `core_md/evaluation-engine-v1.4.md`로 복사했다. 문서 내용은 외부 AI용 제품 데이터로만 취급하고 수정하지 않았다. 평가엔진은 기존 파일과 동일한 원문임을 확인했다.
+- SHA-256: 질문 `5068390D84B779D1493FDF818F7CF31ED238CEBF3F1BDB03DA4C369AEBA91D7D`, 평가 `19025D938DDAC2E5ED924AD39D7CBFEE77D89CE11ABB1084CFA48823A3EA4F2C`. `.gitattributes`로 원문 줄바꿈을 보존하고 이전 질문엔진은 Git v0.1.2에서 복구할 수 있게 했다.
+- 메인의 질문 문서 버전과 메인/질문팩 만들기의 다운로드 링크를 v1.4.1로 연결했다. 생성 파일명을 고정하던 안내는 질문팩 JSON으로 정리했다. 문서 v1.4.1도 `INTERVIEW_PACK/1.0`, `generator.engine_version: "1.2"`를 사용하므로 기존 Validator/저장/면접 Runtime 계약은 변경하지 않았다.
+- PASS — 타입 검사, 7 files/57 테스트, 로컬 및 Pages `/myeok/` 빌드, production Chrome 83 checks. 메인에서 새 질문엔진과 평가엔진을 실제 다운로드하여 원본 hash와 대조했다. 빌드의 두 MD도 첨부 원문과 같고 구 질문엔진은 배포 산출물에 없다.
+- PASS — 현재 빌드의 PC·모바일 메인 화면과 브라우저의 Pages 경로/버전 표시를 확인했다. 기존 GitHub 인증 미연결로 원격 게시는 계속 BLOCKED이며, 로컬 commit/새 v0.1.3 tag와 ZIP을 보존한다.

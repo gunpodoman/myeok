@@ -264,7 +264,7 @@ try {
   step('메인 화면과 질문팩 진입 확인');
   await waitFor("typeof fx !== 'undefined' && Boolean(fx.phase1) && state.importStatus === 'READY' && location.pathname === '/'");
   check('실제 메인 화면',await evaluate("Boolean(document.querySelector('#homeTitle')) && document.querySelector('.home-actions .primary').getAttribute('data-nav')==='/app/packs'"));
-  for (const name of ['question-engine-v1.2.md', 'evaluation-engine-v1.4.md']) {
+  for (const name of ['question-engine-v1.4.1.md', 'evaluation-engine-v1.4.md']) {
     await evaluate(`document.querySelector('.home-engines a[download="${name}"]').click()`);
     const file = path.join(downloadDir, name);
     const deadline = Date.now() + 12000;

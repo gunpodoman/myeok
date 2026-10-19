@@ -1,4 +1,11 @@
-# 학생부 기반 공통 실전면접 질문엔진 v1.2 FINAL
+# 학생부 기반 공통 실전면접 질문엔진 v1.4.1 — 사이트 호환성·다운로드 파일명 안정화본
+
+> **적용 기준:** 원본 질문 생성 품질·변수성·런타임 정책·JSON 스키마 및 `ROOT × BOUNDARY` 호환성 수정을 유지한다. v1.4.1은 한글 파일명의 URL 퍼센트 인코딩 노출과 반복 생성의 이름 충돌을 막기 위해 **실제 저장 파일명·전달 계층·재다운로드 한계**를 분리해 규정한다. 이 문서 자체가 사용 가능한 완전한 질문엔진 명세이며 별도 보조 MD를 요구하지 않는다.
+>
+> **스키마 호환성:** `INTERVIEW_PACK/1.0`과 `generator.engine_version = "1.2"`는 변경하지 않는다. `v1.4.1`은 생성 지침 문서의 수정 식별자일 뿐 새 JSON 필드·enum·스키마 버전이 아니다. 실제 사이트 Validator 소스가 제공되지 않았으므로 확인되지 않은 유형은 ROOT에서 보수적으로 제외한다.
+>
+> **충돌 정정:** 구 원본은 `BOUNDARY`, `COUNTERFACTUAL`, `ALTERNATIVE`, `TRANSFER`를 dual-use로 허용했지만, 사용자 제공 사이트 오류 보고에서는 `BOUNDARY`의 ROOT 사용이 거절되었다. 본 개정판은 네 유형 모두 FOLLOWUP 전용으로 제한하여 같은 계열의 호환성 위험을 줄인다. 이는 사이트가 네 유형 모두를 거절한다는 실측 주장이 아니라 검증 소스가 없는 상태의 보수적 생성 정책이다.
+
 
 ## 0. 문서의 역할
 
@@ -6,7 +13,7 @@
 
 질문 생성 엔진의 유일한 역할은 다음과 같다.
 
-> 학교생활기록부와 필요 시 사용자가 제공한 지원 대학·학과·면접 정보를 분석하여, 외부 웹사이트 面逆力에서 직접 실행할 수 있는 유효한 `interview-pack.json`을 생성한다.
+> 학교생활기록부와 필요 시 사용자가 제공한 지원 대학·학과·면접 정보를 분석하여, 외부 웹사이트 面逆力에서 직접 실행할 수 있는 유효한 `학생이름_ivp_팩식별자.json`을 생성한다.
 
 질문 생성 엔진은 실제 면접을 진행하지 않는다.
 
@@ -25,7 +32,7 @@
 - 면접관 후보 생성
 - 질문 난이도 및 메타데이터 생성
 - 사이트가 사용할 제한적 runtime trigger 생성
-- 유효한 `interview-pack.json` 생성
+- 유효한 `학생이름_ivp_팩식별자.json` 생성
 
 질문 생성 엔진은 다음을 수행하지 않는다.
 
@@ -67,10 +74,11 @@ INTERVIEW_RECHECK/1.0 (선택)
 
 # 1. 최종 출력
 
-주 출력 파일:
+주 출력 파일(고유한 Pack마다 서로 다른 파일명):
 
 ```text
-interview-pack.json
+학생이름_ivp_팩식별자.json
+예: 우지민_ivp_8F3A91C2.json
 ```
 
 인코딩:
@@ -100,6 +108,103 @@ UTF-8
 파일 생성 기능이 있는 환경에서는 실제 `.json` 파일을 생성한다.
 
 파일 생성 기능이 없으면 사용자가 그대로 저장할 수 있는 유효한 JSON 본문만 제공한다.
+
+---
+
+## 1A. 출력·다운로드 파일명 안정화 프로토콜 — 필수 (JSON 외부 처리)
+
+이 절은 질문 생성 전 성명을 확인하고, Pack마다 **실제로 다른 정상 한글 파일명**을 만들어 전달하는 절차다. 과거의 고정명 `interview-pack.json` 또는 `학생이름_ivp.json`만 반복 사용하면 같은 폴더에서 브라우저가 `(1)`, `(2)`를 붙일 수 있으므로, v1.4.1의 새 생성물에는 **Pack ID 기반 고유 접미사**를 항상 사용한다. 질문 내용이나 JSON 스키마는 바꾸지 않는다.
+
+### 1A.1 학생 이름의 근거와 식별 우선순위
+
+1. 입력 학교생활기록부의 **학생 인적사항에 명시된 성명**을 최우선으로 확인한다. PDF·HTML·DOCX·XLSX 등 입력 형식을 가리지 않는다.
+2. 사용자가 학생 이름을 명시했다면 원본과 대조한다. 서로 다르면 임의로 선택하지 말고 확인을 요청한다.
+3. 인적사항이 없다면 교사·저자·다른 학생의 이름으로 추측하지 않는다. 첨부 **파일 제목은 보조 단서일 뿐 확인된 성명의 대체물이 아니다.**
+4. 복수 학생의 기록이 섞인 경우 임의로 한 명을 선택하지 않는다.
+5. 신뢰할 근거로 학생 이름을 확정할 수 없다면 **이름 한 가지만 확인**하고, 임의 이름의 최종 Pack을 만들지 않는다.
+
+이름은 **실제 파일명**을 만드는 데만 사용한다. `INTERVIEW_PACK/1.0`에 `student_name`, `file_name`, `output_filename` 등 필드를 추가하지 않는다. `source_record.student_name_included = false`를 유지하고, 질문 본문에서 불필요한 직접 식별정보를 배제한다.
+
+### 1A.2 새 생성물의 유일한 표준 파일명
+
+```text
+<확정학생이름>_ivp_<pack_id에서 PACK_ 접두사를 제거한 고유 토큰>.json
+```
+
+- 파일명은 사람이 읽는 **실제 유니코드 한글**을 사용한다. 성명은 앞뒤 공백 제거, Unicode NFC 정규화, 파일 시스템 금지 문자(`/`, `\`, `:`, `*`, `?`, `"`, `<`, `>`, `|`, 제어문자) 제거/안전 치환 후 사용한다.
+- `pack_id`는 Section 4에 따라 후보 생성 전에 만든다. 신규 Pack에는 `PACK_`와 **암호학적 난수 기반 대문자 12~16자리 16진수**를 권장한다. 식별자 접두사를 제거한 토큰이 파일명의 마지막 고유 부분이다. JSON 내부의 기존 `pack_id`는 그대로 유지한다.
+- 예: 성명 `우지민`, `pack_id="PACK_8F3A91C2"` → **`우지민_ivp_8F3A91C2.json`**.
+- 예: 성명 `김서연`, `pack_id="PACK_4A1C9062BDF3"` → **`김서연_ivp_4A1C9062BDF3.json`**.
+- 동일 학생의 **서로 다른 Pack**은 서로 다른 `pack_id`를 갖도록 하여 운영체제의 자동 `(1)` 증번에 의존하지 않는다. 같은 `pack_id`로 새 Pack을 생성하거나 다른 내용의 파일을 덮어쓰지 않는다.
+- 날짜·대학·학과·지원 전공·파일명 메타데이터는 추가하지 않는다. 파일명은 JSON 필드가 아니며, 출력 파일명을 질문은행에 넣지 않는다.
+- 과거의 `우지민_ivp.json`은 기존 파일로 읽을 수 있지만, **신규 생성 파일명으로는 사용하지 않는다.**
+
+**중요한 범위 구분:** 새 Pack을 고유하게 이름 짓는 것은 동일 학생의 *서로 다른 Pack*끼리 충돌하는 상황을 줄인다. 사용자가 **완전히 같은 파일을 같은 다운로드 폴더에 다시 저장**할 때 브라우저가 붙이는 `(1)`까지 엔진의 MD 지침만으로 막을 수는 없다. 브라우저 다운로드 경로에 대한 접근 권한이나 사용자 조작 없이 충돌 처리 동작을 보장했다고 주장하지 않는다.
+
+### 1A.3 URL 퍼센트 인코딩이 파일명으로 노출되는 문제 — 강제
+
+문자열 `%EC%9A%B0%EC%A7%80%EB%AF%BC`은 한글 `우지민`을 UTF-8로 URL 퍼센트 인코딩한 표현이지 학생 성명이 아니다. **URL/전송 경로의 인코딩 문자열과 로컬 파일 시스템의 실제 basename을 구분**한다.
+
+```text
+정상적인 로컬 basename : 우지민_ivp_8F3A91C2.json
+전송 URL 내부 표현      : %EC%9A%B0%EC%A7%80%EB%AF%BC_ivp_8F3A91C2.json (허용)
+다운로드된 실제 파일명  : %EC%9A%B0%EC%A7%80%EB%AF%BC_ivp_8F3A91C2.json (금지/오류)
+```
+
+1. `Path` 등 파일 생성 API에 전달할 basename은 반드시 **디코딩된 유니코드 문자열**이다. 로컬 파일명에 `urllib.parse.quote()`, `encodeURIComponent()` 또는 수동 `%XX` 치환 결과를 쓰지 않는다.
+2. 이미 `%XX`가 포함된 **전송·업로드 메타데이터**에서 파일명을 복원할 때는, 그 값이 URL 인코딩이라는 사실을 확인한 뒤 UTF-8로 **한 번만** percent-decode하고 NFC 정규화한다. 의미를 모르는 원본 성명에 무조건 반복 디코딩하지 않는다. 경로 분리 문자를 복원한 뒤에는 basename만 취하고 안전성 검사를 재실행한다.
+3. 파일 생성 후 `Path(output).name`을 확인해, `%EC%...`처럼 학생 이름이 퍼센트 인코딩된 파일명이나 ` (1)`, ` (2)` 등의 복제 접미사가 **엔진이 생성한 원본 파일명**에 들어가지 않았는지 검증한다.
+4. 화면에 표시하는 링크 제목·다운로드 안내도 디코딩된 한글 파일명을 쓴다. **링크 제목만 정상으로 바꾸고 실제 파일 basename이 인코딩 상태인 것은 실패**다.
+5. 다운로드를 직접 구현하는 HTTP 서버라면 `Content-Disposition`의 `filename*`를 UTF-8 인코딩 규격에 맞게 설정하고 실제 브라우저 저장 파일명을 시험한다. `filename*` 속성값의 `%XX`는 허용되지만, 사용자 파일명으로 `%XX`가 그대로 저장되면 실패다.
+6. 채팅 첨부 시스템·호스팅 서비스가 파일명을 강제로 인코딩하여 전달하는 경우에는 MD 지침만으로 외부 시스템의 이름 처리 결과를 제어할 수 없다. 이러한 환경에서는 **UTF-8로 이름을 보존한 JSON을 담은 ZIP**을 보조 제공할 수 있다. ZIP의 바깥 이름은 ASCII(`ivp_<pack-token>.zip`)로 두고, ZIP 내부 파일명은 정상 한글 `학생이름_ivp_<pack-token>.json`으로 저장해 실제 압축 해제 후 이름을 검사한다. ZIP은 우회 전달 수단이지 `INTERVIEW_PACK/1.0` JSON을 대체하는 새 스키마가 아니다.
+
+### 1A.4 생성·전달·검증 순서
+
+```text
+학생부에서 성명 검증
+  → pack_id를 먼저 생성하고 PACK_ 뒤 토큰을 확정
+  → <확정학생이름>_ivp_<토큰>.json (NFC 한글 basename) 구성
+  → Record Map 및 질문 생성, Section 75·75A 검증 PASS
+  → UTF-8 JSON 직렬화
+  → 실제 파일 시스템에 유니코드 basename으로 저장
+  → 실제 basename·JSON 내용·중복 경로 재확인
+  → 디코딩된 한글 파일명으로 링크·첨부 제공
+  → 다운로드 계층에서 %XX로 변형되는 것이 확인되면 보조 ZIP 제공/한계 고지
+```
+
+검증되지 않은 전달 계층까지 `다운로드된 파일명 보장`, `브라우저에서 (1) 미발생`이라고 선언하지 않는다. 이름 문제로 인해 JSON 안에 출처·학생 이름·파일명 필드를 추가하거나 무결성 플래그를 조작하는 행위를 금지한다.
+
+### 1A.5 기준 파일 저장 구현 — 실행 가능한 Python 환경 예시
+
+다음은 검증된 `pack` 객체, 확정된 `verified_student_name`, 저장 디렉터리 `output_dir`가 있을 때 사용하는 **저장 계층의 기준 예시**다. 생성 환경이 Python이 아니어도 동일한 출력 basename·중복 방지·검증 결과를 만족해야 한다.
+
+```python
+import json
+import re
+import unicodedata
+from pathlib import Path
+
+# pack, verified_student_name, output_dir는 별도 검증을 통과한 입력이다.
+name = unicodedata.normalize("NFC", verified_student_name.strip())
+name = re.sub(r'[<>:"/\\|?*\x00-\x1f]', "_", name).strip(" .")
+assert name, "학생 이름이 확정되지 않았습니다."
+
+pack_id = pack["pack_id"]
+assert re.fullmatch(r"PACK_[0-9A-F]{8,16}", pack_id), "새 Pack ID 형식 오류"
+token = pack_id.removeprefix("PACK_")
+basename = f"{name}_ivp_{token}.json"  # 반드시 유니코드 실제 파일명
+assert not re.search(r"%[0-9A-Fa-f]{2}", basename)
+assert not re.search(r" \(\d+\)\.json$", basename)
+
+output = Path(output_dir) / basename
+# x 모드는 중복 경로가 있을 때 덮어쓰기 대신 예외를 발생시킨다.
+with output.open("x", encoding="utf-8") as fp:
+    json.dump(pack, fp, ensure_ascii=False, indent=2)
+assert output.name == basename
+assert json.loads(output.read_text(encoding="utf-8"))["pack_id"] == pack_id
+```
+
+`FileExistsError`가 발생하면 **서로 다른 새 Pack인지 먼저 확인**한다. 새 Pack이라면 새 `pack_id`를 생성하고 질문팩 전체 검증 절차를 다시 수행한다. 동일 Pack을 재전송하는 경우 이름만 임의 변경하여 별개 Pack으로 가장하지 않는다. 외부 전달 서비스가 한글 파일명을 보존하지 못하는 것으로 확인되면 Section 1A.3의 ASCII 이름 ZIP 보조 전달을 적용한다.
 
 ---
 
@@ -1599,7 +1704,7 @@ RECOVERY
 
 `question_type`은 질문 생성 과정의 전체 의미를 혼자 표현하는 필드가 아니다. 생성 단계에서는 Section 9의 내부 Intent Family를 먼저 정하고, 최종 전송 시 기존 question_type과 coverage_tags로 매핑한다.
 
-`BOUNDARY`, `COUNTERFACTUAL`, `ALTERNATIVE`, `TRANSFER`는 질문 자체가 독립적으로 성립하면 ROOT와 FOLLOWUP 양쪽에서 사용할 수 있는 dual-use type이다. relation별 세부 규칙은 Section 60~61을 따른다.
+**사이트 호환성 우선 규칙(강제):** `BOUNDARY`, `COUNTERFACTUAL`, `ALTERNATIVE`, `TRANSFER`는 본 개정판에서 **FOLLOWUP 전용**으로 취급한다. 해당 의미를 가진 독립 ROOT 질문은 문장 자체를 제거하지 말고 Section 60의 ROOT 허용 유형 중 주된 검증 목적에 맞는 유형으로 분류한다. ROOT와 FOLLOWUP 허용 유형은 Section 60~61의 정확한 집합을 적용하며, 이 문서의 다른 내부 `BOUNDARY_VALUE`, `ROLE_BOUNDARY`, `BOUNDARY_TEST` 또는 `coverage_tags: ["boundary"]`와 혼동하지 않는다.
 
 ---
 
@@ -2253,9 +2358,9 @@ A → B → C → A
 
 ---
 
-# 60. Root 질문 유형 매핑
+# 60. Root 질문 유형 매핑 — 사이트 호환 집합 (강제)
 
-다음 question_type을 Root에서 사용할 수 있다.
+ROOT는 **아래 15종만** 사용한다. 아래 집합 밖의 `question_type`을 ROOT에 사용하는 것은 질문의 문장 완성도와 관계없이 **검증 실패**다.
 
 ```text
 ACTIVITY_VERIFY
@@ -2273,33 +2378,51 @@ SURPRISE
 SELF_INTRO
 MOTIVATION
 DAILY
-BOUNDARY
-COUNTERFACTUAL
-ALTERNATIVE
-TRANSFER
 ```
 
-특히 다음 네 type은 dual-use다.
+ROOT의 기본 관계·트리 조건:
 
 ```text
-BOUNDARY
-COUNTERFACTUAL
-ALTERNATIVE
-TRANSFER
+relation = ROOT
+root_question_id = 자기 question_id
+parent_question_id = null
+runtime_trigger.type ∈ {ALWAYS_ELIGIBLE, RANDOM, SESSION_TIME_REMAINING}
 ```
 
-ROOT로 사용할 때는 직전 답변이 없어도 독립적으로 완결되어야 한다.
+**금지:** `BOUNDARY`, `COUNTERFACTUAL`, `ALTERNATIVE`, `TRANSFER`, `VERIFY`, `CLARIFY`, `CONCEPT_CHECK`, `METHOD_CHECK`, `EVIDENCE_CHECK`, `SELF_CORRECTION`, `RECOVERY`를 ROOT에 배정하지 않는다.
 
-예:
+다만 **질문의 사고 작용을 제한하는 것은 아니다.** 역할·근거 경계 검증이나 가정적 상황·대안·전이 판단도 부모 답변 없이 성립하고 기록 근거가 있으면 ROOT로 설계할 수 있다. 이때 허용된 ROOT 타입 안에서 **주요 검증 의도**에 따라 분류한다.
+
+| ROOT 질문에서 확인하는 핵심 | 허용되는 question_type의 예 | 설명 |
+| --- | --- | --- |
+| 직접 수행/팀 수행 구분 | `ACTIVITY_VERIFY` | 활동 참여 사실과 소유 범위 중심 |
+| 실측/모델/문헌의 결과 근거 구분 | `RESULT_EVIDENCE` | 결과의 근거·출처 확인 중심 |
+| 주장 가능 범위 및 한계 | `LIMITATION` | 결론의 한계·적용 범위 중심 |
+| 개념 간 역할·작동 원리 구별 | `CONCEPT` | 개념 이해 중심 |
+| 다른 방법 및 조건 변경에 따른 방법 선택 | `METHOD` | 대안·반사실 질문이어도 방법 판단 중심 |
+| 다른 학업 맥락으로 원리 적용 | `ACADEMIC` | 학업적 전이 중심, 실제 근거 필요 |
+
+예 (모두 ROOT 사용 가능):
 
 ```text
-BOUNDARY: 이 결과에서 직접 측정한 부분과 프로그램이 계산한 부분을 구분해보세요.
-ALTERNATIVE: 다른 방법을 썼다면 어떤 방법을 먼저 검토했을까요?
-COUNTERFACTUAL: 결과가 반대로 나왔다면 해석을 어떻게 바꿨을까요?
-TRANSFER: 이 판단 기준을 다른 프로젝트에도 적용할 수 있을까요?
+RESULT_EVIDENCE: 이 결과에서 직접 측정한 부분과 프로그램이 계산한 부분을 구분해보세요.
+METHOD: 다른 방법을 사용한다면 무엇부터 비교하겠습니까?
+LIMITATION: 관측 결과가 반대로 나왔을 때 기존 해석의 어떤 전제부터 검토하시겠습니까?
+ACADEMIC: 이 판단 기준을 다른 연구 과제에 적용하려면 무엇을 먼저 확인해야 할까요?
 ```
 
-`VERIFY`, `CLARIFY`, `CONCEPT_CHECK`, `METHOD_CHECK`, `EVIDENCE_CHECK`, `SELF_CORRECTION`, `RECOVERY`는 FOLLOWUP 전용으로 유지한다.
+- 위 매핑은 기계적 문자열 치환표가 아니다. 질문의 실제 `primary_text`, 근거 및 `question_intent`를 확인하여 의미와 맞는 유형을 선택한다.
+- `coverage_tags`의 `boundary`는 ROOT에서도 유효하다. 단, **`question_type = BOUNDARY`로 자동 승격시키지 않는다.**
+- 만약 적절한 ROOT 유형이 없다면 그 후보를 억지로 변환하지 말고 유효한 부모 ROOT에 연결되는 FOLLOWUP으로 재설계하거나 제외한다.
+- ROOT로 설계한 질문은 아직 나오지 않은 지원자 답변을 전제하지 않는다.
+
+**확인된 오류 재발 방지:** 아래 조합을 하나라도 생성하면 출고 금지.
+
+```json
+{"relation":"ROOT","question_type":"BOUNDARY"}
+```
+
+같은 보수적 정책은 나머지 세 조건부·대안·전이 전용 타입에도 적용한다.
 
 ---
 
@@ -2321,9 +2444,9 @@ SELF_CORRECTION
 RECOVERY
 ```
 
-`BOUNDARY`, `COUNTERFACTUAL`, `ALTERNATIVE`, `TRANSFER`는 ROOT에도 사용할 수 있지만 FOLLOWUP에서는 직접 parent의 답변을 더 깊게 검증하는 역할로 사용한다.
+본 개정판에서 `BOUNDARY`, `COUNTERFACTUAL`, `ALTERNATIVE`, `TRANSFER`는 FOLLOWUP 전용이다. 직접 부모가 실제로 존재하고 답변 lifecycle이 종료된 뒤에만 표시하며, 부모의 검증 목적을 더 깊게 다룬다. 독립적으로 성립하는 비슷한 문장이라도 이 네 문자열을 ROOT의 `question_type`에 사용하지 않는다.
 
-FOLLOWUP 전용 type을 ROOT에 사용하지 않는다. ROOT 전용 type을 FOLLOWUP에 사용하지 않는다.
+FOLLOWUP 전용 11종을 ROOT에 사용하지 않는다. ROOT 전용 15종을 FOLLOWUP에 사용하지 않는다. **허용 범위의 겹침은 없다.** 질문의 주제(`coverage_tags`)와 분류(`question_type`)는 다른 필드다.
 
 ---
 
@@ -2560,7 +2683,11 @@ Root 약 20~30개
 }
 ```
 
-모든 `*_passed`는 실제 검증 결과와 일치해야 한다.
+모든 `*_passed`는 실제 검증 결과와 일치해야 한다. **위 JSON은 필드 형태를 보여 주는 예시이며, `true`는 자동 기본값이 아니다.** 생성 모델이 검사를 생략하고 `true`를 인쇄하는 행위를 금지한다. 검사 결과를 객관적으로 계산하여 각 flag에 반영한 후, 실패하면 수정·전량 재검사하고 최종 파일을 제공하지 않는다.
+
+`enum_validation_passed`는 단순히 `question_type`이 Section 35의 전역 목록에 들어 있는지 확인하는 값이 아니다. 특히 **`relation`과 `question_type`의 허용 조합**(Section 60~61) 및 다른 모든 enum 집합을 함께 검사해야 `true`가 될 수 있다. 예를 들어 `BOUNDARY`는 전역 enum에 존재하지만 `ROOT × BOUNDARY`는 `enum_validation_passed = false`다. 원본에 있던 `BOUNDARY` dual-use 기술을 합격 근거로 사용하면 안 된다.
+
+`graph_validation_passed`는 ROOT/FOLLOWUP 트리·깊이·비순환성·직접 자식 관계의 구조 검사가 참일 때만, `reference_validation_passed`는 question/evidence/interviewer 참조가 실제 존재하고 서로 연결될 때만, `runtime_trigger_validation_passed`는 trigger type·relation별 허용 집합·trigger 전용 필드·유효 범위가 모두 맞을 때만 참이다. `duplicate_intent_check_passed`는 Section 9의 의미적 중복 검사를 거쳐야 한다. **한 flag가 다른 flag의 검증을 대신하지 않는다.**
 
 `questions_without_record_evidence`는 생성 과정의 진단 흔적을 담을 수 있으나, 사용자에게 제공하는 최종 유효 Pack에서는 반드시 `[]`이어야 한다. DAILY / SELF_INTRO / MOTIVATION 이외의 질문이 이 목록에 남아 있으면 Acceptance Test 실패다.
 
@@ -2623,7 +2750,7 @@ Pack에 불필요한 직접 식별정보를 포함하지 않는다.
 
 # 75. 최종 Acceptance Test
 
-최종 `interview-pack.json` 생성 전에 다음을 전부 검사한다.
+최종 `학생이름_ivp_팩식별자.json` 생성 전에 다음을 전부 검사한다. Section 60~61의 관계별 허용 집합을 최우선으로 적용한다.
 
 1. 유효한 JSON
 2. schema가 정확히 `INTERVIEW_PACK/1.0`
@@ -2666,7 +2793,7 @@ Pack에 불필요한 직접 식별정보를 포함하지 않는다.
 39. Follow-up이 부모와 같은 답을 표현만 바꿔 반복하지 않음
 40. Follow-up progression이 최소 한 검증 차원 이상 전진함
 41. Root가 아직 나오지 않은 학생 답변을 전제하지 않음
-42. dual-use type의 ROOT 사용이 독립적으로 완결됨
+42. ROOT에서 FOLLOWUP 전용 11개 유형(`BOUNDARY` 포함)이 사용되지 않고, 조건 변경·경계·대안·전이 ROOT는 허용 유형으로 의미에 맞게 분류됨
 43. Activity / Record Cluster 과잉 병합 없음
 44. 하나의 Cluster가 불필요하게 Root를 독점하지 않음
 45. 하나의 Intent Family가 불필요하게 Root를 독점하지 않음
@@ -2697,22 +2824,139 @@ Pack에 불필요한 직접 식별정보를 포함하지 않는다.
 70. 이전 Pack이 제공되고 질문 공간이 충분한 경우 non-anchor Root가 실질적으로 고착되지 않음
 71. DAILY / SELF_INTRO / MOTIVATION 이외의 모든 최종 질문은 `evidence_ids`가 1개 이상임
 72. 최종 `integrity.questions_without_record_evidence`가 빈 배열임
+73. ROOT의 모든 `question_type`이 Section 60의 정확한 15종 안에 있음
+74. FOLLOWUP의 모든 `question_type`이 Section 61의 정확한 11종 안에 있음
+75. `coverage_tags`의 `boundary` 또는 내부 `ROLE_BOUNDARY`/`BOUNDARY_TEST`를 이유로 ROOT에 `BOUNDARY`를 배정하지 않음
+76. 같은 Pack에서 모든 relation별 타입·runtime trigger 조합의 검증 결과로 `integrity.enum_validation_passed`, `integrity.runtime_trigger_validation_passed` 값을 각각 산출함
+77. `integrity`의 모든 `*_passed`가 실제 검사 결과와 일치하고 치명적 오류가 있으면 모든 `true`를 유지한 채 출력하지 않음
+78. 학생의 이름이 학생부에서 명확하게 식별되었으며 복수 학생·교사·문서 작성자 이름과 혼동되지 않음
+79. **실제 저장 basename**이 `<확정학생이름>_ivp_<pack_id 토큰>.json`이며 Pack 내부 `pack_id`와 토큰이 일치함
+80. 파일명 때문에 JSON의 폐쇄형 핵심 스키마 또는 `source_record.student_name_included = false`를 변경하지 않음
+81. 실제 저장 basename의 한글이 NFC 유니코드이며 URL 퍼센트 인코딩 문자열로 치환되지 않음
+82. 실제 저장 basename에 브라우저식 복제 접미사 ` (1)`, ` (2)` 등을 엔진이 임의로 넣지 않음
+83. 새 Pack마다 다른 `pack_id`로 다른 basename을 만들며 기존 Pack의 다른 내용을 조용히 덮어쓰지 않음
+84. 다운로드 링크에 표시되는 이름과 실제 생성된 파일의 basename을 개별 점검함
+85. 전달 서비스가 다운로드 파일명을 재인코딩하는 경우 확인한 한계를 고지하고, 필요하다면 정상 한글 내부명을 가진 ASCII 이름 ZIP을 별도 제공함
 
 치명적 오류가 하나라도 있으면 사용자에게 파일을 제공하기 전에 내부 수정 후 다시 검증한다. 특히 71~72 실패는 warning으로 제공하지 않고 질문 재작성·제거 후 재검증한다.
 
 ---
 
-# 76. 최종 출력 규칙
+# 75A. 오류 재발 방지 — 강제 Gate 및 회귀 검증
 
-최종 산출물은 반드시 유효한:
+이 절은 앞의 Acceptance Test를 실행 가능한 의사결정 절차로 해석한다. 점검 항목이 많다는 이유로 검증을 요약·샘플링하거나 성공값을 추정하지 않는다.
+
+## 75A.1 관계별 허용 집합 (검증의 단일 기준)
 
 ```text
-interview-pack.json
+ROOT_ALLOWED = {
+  ACTIVITY_VERIFY, CONCEPT, METHOD, RESULT_EVIDENCE, LIMITATION,
+  CAREER, ACADEMIC, READING, COMMUNITY, GROWTH,
+  CROSS_RECORD, SURPRISE, SELF_INTRO, MOTIVATION, DAILY
+}
+
+FOLLOWUP_ALLOWED = {
+  VERIFY, CLARIFY, CONCEPT_CHECK, METHOD_CHECK, EVIDENCE_CHECK,
+  BOUNDARY, COUNTERFACTUAL, ALTERNATIVE, TRANSFER,
+  SELF_CORRECTION, RECOVERY
+}
+
+assert ROOT_ALLOWED ∩ FOLLOWUP_ALLOWED = ∅
 ```
 
-실제 JSON 내부에는 설명·Markdown·주석을 넣지 않는다.
+- 검사 시 35장의 전체 enum 목록에 포함되는지만 확인하는 것은 **불충분**하다.
+- 각 `question_bank[i]`에서 `relation = ROOT`이면 `question_type ∈ ROOT_ALLOWED`, `relation = FOLLOWUP`이면 `question_type ∈ FOLLOWUP_ALLOWED`를 별도로 확인한다.
+- 두 집합 중 어느 쪽에도 속하지 않는 relation은 무조건 오류다.
+- 오류 보고서에는 `question_id`, `question_bank` 배열 인덱스, `relation`, `question_type`, `허용 목록`, 오류 원인을 기록한다. 이 오류 보고서는 진단용 내부 출력으로 취급하며 최종 유효 JSON의 임의 필드로 섞지 않는다.
 
-파일 생성 기능이 있으면 실제 파일로 제공한다.
+## 75A.2 품질을 유지하는 안전 수정 원칙
+
+관계·타입 오류가 확인되면 다음 순서로 처리한다.
+
+```text
+(1) 원문 질문, question_intent, primary_text, evidence_ids, coverage_tags를 모두 확인
+(2) 질문이 부모 답변 없이 독립적으로 성립하는가 평가
+(3-A) 독립 ROOT라면 Section 60에서 의미가 일치하는 허용 ROOT 유형으로 분류
+(3-B) 부모 답변이 필요한 질문이라면 유효한 ROOT의 자식으로 재설계
+(4) root_question_id, parent_question_id, followup_ids, runtime_trigger를 재검증
+(5) 문장/유형/evidence/난이도/intent의 의미 일치 및 예상 답변 중복 확인
+(6) 전체 question_bank 및 integrity를 처음부터 전량 재검증
+```
+
+`BOUNDARY`를 언제나 `LIMITATION`으로, `COUNTERFACTUAL`을 언제나 `METHOD`로 바꾸는 등 **기계적 대량 치환 금지**. 예를 들어 Q031·Q059처럼 모형의 **적용 한계**가 핵심이면 `LIMITATION`을 우선 검토하고, Q065처럼 회로 요소의 **기능 차이 이해**가 핵심이면 `CONCEPT`를 검토할 수 있다. 단, 이 ID들의 실제 질문 전문은 현재 명세에 포함되지 않으므로 사례별 선택은 원본 JSON의 문장·근거 확인 후 확정한다.
+
+## 75A.3 출고 전 검증 순서
+
+```text
+원본 학생부 및 학생 이름 식별 완료?
+  NO → 학생 이름 확인 요청, 최종 JSON 미출력
+  YES ↓
+후보 생성 / 품질 Gate / Root-Follow-up 구성 완료
+  ↓
+JSON 구조·스키마·필수 필드·타입·전역 enum 검사
+  ↓
+relation × question_type 검사 (Section 60~61)
+  ↓
+trigger relation 호환·필드·수치 범위 검사 (Section 46~55)
+  ↓
+question_id/evidence_id/interviewer_id 고유성·참조·트리·cycle 검사
+  ↓
+근거의 사실성·중복 Expected Answer·질문 가치·정보 누출 검사
+  ↓
+각 검사에서 산출된 실제 결과로 integrity 플래그 결정
+  ↓
+하나라도 FAIL? YES → 해당 질문 수정 또는 삭제 후 **전체 검사 처음부터 재실행**
+               NO  → 플래그 간 일치 여부까지 확인
+  ↓
+최종 파일명 <확정학생이름>_ivp_<pack_id 토큰>.json 확인
+  ↓
+실제 파일명에서 URL 인코딩 문자열 및 임의 (1) 접미사 검출 시 FAIL
+  ↓
+유효한 JSON만 해당 이름으로 제공
+```
+
+검증 도구·실행 환경이 없으면 **독립 기계 검증을 완료한 것처럼 주장하지 않는다.** 생성 내용의 규칙 대조와 가능 범위의 구조 검사를 수행하되, 외부 사이트 통과 여부가 확인되지 않았다면 그 한계를 명시한다. JSON 파싱·참조·관계 제약에 대해 확인할 수 없는 항목을 통과로 간주해서는 안 된다.
+
+## 75A.4 최소 회귀 사례 (모두 매번 수행)
+
+| 검사 입력 | 기대 결과 |
+| --- | --- |
+| `ROOT × BOUNDARY` | FAIL |
+| `ROOT × COUNTERFACTUAL` | FAIL (보수적 호환 규정) |
+| `ROOT × ALTERNATIVE` | FAIL (보수적 호환 규정) |
+| `ROOT × TRANSFER` | FAIL (보수적 호환 규정) |
+| `ROOT × LIMITATION` | 유형 검증 PASS |
+| `ROOT × CONCEPT` | 유형 검증 PASS |
+| `ROOT × RESULT_EVIDENCE` 및 `coverage_tags=["boundary"]` | 유형 검증 PASS |
+| `FOLLOWUP × BOUNDARY` 및 유효한 직접 부모 | 유형 검증 PASS |
+| `FOLLOWUP × BOUNDARY`이지만 부모가 없음 | 그래프·참조 검증 FAIL |
+| `ROOT × VERIFY` | FAIL |
+| `ROOT × KEYWORD_ANY trigger` | runtime trigger 검증 FAIL |
+| `FOLLOWUP × AFTER_PARENT trigger` 및 유효한 직접 부모 | trigger 유형 검증 PASS |
+| 잘못된 ROOT 타입이 있는데 `enum_validation_passed=true` | enum 위반 + 무결성 선언 불일치, 최종 출고 FAIL |
+| 학생 성명 `우지민`·`pack_id=PACK_8F3A91C2` 확인 | `우지민_ivp_8F3A91C2.json` |
+| 한글 basename 대신 `%EC%9A%B0%EC%A7%80%EB%AF%BC_ivp_8F3A91C2.json`로 **실제 저장** | 파일명 검증 FAIL |
+| 다른 Pack에 기존 `PACK_8F3A91C2`를 재사용 | 고유성 검증 FAIL |
+| 엔진이 만든 basename이 `우지민_ivp_8F3A91C2 (1).json` | 파일명 검증 FAIL |
+| URL에서 `%EC%9A...`처럼 인코딩된 문자 전송 후 실제 저장 한글 이름 복원 | 전달 검증 PASS (외부 전달 결과가 확인된 경우에만) |
+| 학생 이름 확인 불가 | 임의 이름 파일 생성 금지 |
+
+위 사례의 PASS는 **해당 항목의 국소 검증 결과**이며 Pack 전체 합격 판정이 아니다. 전체 합격은 75장의 모든 요구 사항을 충족해야 한다.
+
+---
+
+# 76. 최종 출력 규칙
+
+최종 산출물은 반드시 `INTERVIEW_PACK/1.0`에 부합하는 유효한 JSON이며, 실제 파일명은 **1A절에서 확인한 학생 이름**을 적용한다.
+
+```text
+<확정학생이름>_ivp_<pack_id 토큰>.json
+예: 우지민_ivp_8F3A91C2.json
+```
+
+파일 이름 문자열 자체가 JSON 내용에 포함되지는 않는다. 실제 JSON 내부에는 설명·Markdown·주석·파일명 전용 필드를 넣지 않는다.
+
+파일 생성 기능이 있으면 Section 1A의 정확한 NFC 한글 basename과 고유 pack 토큰을 가진 실제 `.json` 파일로 제공한다. 전달 시스템이 한글명을 인코딩된 상태로 강제 저장하면 숨기지 않고 보조 ZIP을 제공할 수 있으며, 해당 시스템에서의 원천 해결은 별도의 다운로드/첨부 처리 수정이 필요하다. 파일 생성 기능이 없으면 JSON 본문과 저장할 basename을 JSON 외부에서 명확하게 안내한다. 검증 실패 또는 이름 미확정 상태에서는 완료 파일처럼 제공하지 않는다.
 
 질문 엔진은 파일 생성 이후 면접을 시작하지 않는다.
 
@@ -2725,6 +2969,8 @@ interview-pack.json
 성공 기준:
 
 > 학생부 하나를 분석한 뒤, 단순히 형식상 유효한 질문을 많이 만드는 것이 아니라, 학생부에서 실제 검증 가치가 높은 지점을 찾아 서로 다른 사고를 요구하는 후보를 충분히 생성·선별하고, 저가치·정답노출·중복 질문을 제거한 Root / Follow-up 질문은행을 만든다. 같은 학생부로 Pack을 다시 생성할 때도 generation_seed 기반 Controlled Variability를 통해 사실·핵심 Coverage·품질 하한은 유지하면서 질문 기회·Intent·Reasoning Lens·evidence scope의 조합이 실질적으로 달라질 수 있어야 한다. 또한 面逆力 사이트는 `QUESTION_ENGINE_RUNTIME/1.0`에 따라 같은 Pack 안에서도 session_seed를 이용해 여러 번 서로 다른 실전 면접을 구성할 수 있어야 한다.
+
+최종 출력명은 본 개정판 1A절에 따라 Pack별 `<확정학생이름>_ivp_<pack_id 토큰>.json`으로 정한다. URL 퍼센트 인코딩 텍스트는 실제 파일명으로 쓰지 않는다. 파일명 변경은 JSON 내부 스키마를 변경하지 않는다.
 
 본 문서는 이후 작성될 `INTERVIEW_PACK/1.0` JSON Schema의 사람이 읽는 공식 명세 역할을 한다.
 
