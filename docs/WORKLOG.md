@@ -237,3 +237,11 @@
 - 메인의 질문 문서 버전과 메인/질문팩 만들기의 다운로드 링크를 v1.4.1로 연결했다. 생성 파일명을 고정하던 안내는 질문팩 JSON으로 정리했다. 문서 v1.4.1도 `INTERVIEW_PACK/1.0`, `generator.engine_version: "1.2"`를 사용하므로 기존 Validator/저장/면접 Runtime 계약은 변경하지 않았다.
 - PASS — 타입 검사, 7 files/57 테스트, 로컬 및 Pages `/myeok/` 빌드, production Chrome 83 checks. 메인에서 새 질문엔진과 평가엔진을 실제 다운로드하여 원본 hash와 대조했다. 빌드의 두 MD도 첨부 원문과 같고 구 질문엔진은 배포 산출물에 없다.
 - PASS — 현재 빌드의 PC·모바일 메인 화면과 브라우저의 Pages 경로/버전 표시를 확인했다. 기존 GitHub 인증 미연결로 원격 게시는 계속 BLOCKED이며, 로컬 commit/새 v0.1.3 tag와 ZIP을 보존한다.
+
+## 2026-10-19 — GitHub 계정 연결·공유 저장소 업로드·공개 배포
+
+- 사용자 직접 브라우저 인증으로 Git Credential Manager에 `sikmulman` 계정이 연결됐다. 요청 대상 `gunpodoman/myeok`의 쓰기 권한을 실제 push로 확인했다.
+- PASS — `main`을 `4e42ce0252044ec9f3d7b25d76949d04fa40a3cc`로 올리고 새 태그 `v0.1.2`, `v0.1.3`을 atomic push했다. 메인 다운로드 카드와 사용자 제공 질문엔진 v1.4.1·평가엔진 v1.4가 함께 반영됐다. 원격 refs도 확인했다.
+- PASS — [Pages 실행 39183818497](https://github.com/gunpodoman/myeok/actions/runs/39183818497)의 build/deploy 모두 completed/success.
+- PASS — [공개 사이트](https://gunpodoman.github.io/myeok/)를 실제 브라우저에서 열어 메인의 두 다운로드 카드와 질문 v1.4.1·평가 v1.4 링크를 확인했다. 공개 MD를 내려받아 저장소/사용자 원문 SHA-256과 일치함을 검증했다.
+- 이전 기록의 GitHub 인증/업로드 차단은 해결됐다. 운영 기록 후속 commit은 기능 변경 없이 같은 사이트를 게시한다.

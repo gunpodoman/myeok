@@ -5,14 +5,14 @@
 - [x] 질문엔진 문서 v1.4.1·평가엔진 v1.4를 사용자 첨부 원문으로 복사하고 SHA-256 확인
 - [x] 메인·질문팩 안내의 다운로드 경로/버전/JSON 안내 갱신, 구 질문엔진 파일 제거
 - [x] 질문팩 schema 1.0·generator 1.2 유지, 57 단위 테스트·83 브라우저 checks·로컬/Pages 빌드
-- [ ] BLOCKED: GitHub 업로드·공개 Pages 재배포 — 기존 로그인 미연결 상태
+- [x] GitHub 계정 연결 및 `gunpodoman/myeok` main·v0.1.2/v0.1.3 업로드·공개 Pages 배포 검증
 
 ## 2026-10-19 — 메인 엔진 다운로드 가시성
 
 - [x] 메인 상단에 질문엔진 v1.2·평가엔진 v1.4 다운로드 카드와 용도 안내
 - [x] PC·모바일 화면 확인, 실제 다운로드 원문 SHA-256 검증
 - [x] 타입/57 단위 테스트/로컬·Pages 빌드/production 83·dev 87 브라우저 checks
-- [ ] BLOCKED: GitHub push·Pages 재배포 — 현재 환경에 GitHub 로그인 정보가 없음
+- [x] GitHub 계정 연결 후 메인 가시성 개선 커밋과 버전 태그 업로드
 
 ## PHASE 1 — 완료
 
